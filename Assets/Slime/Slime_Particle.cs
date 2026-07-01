@@ -26,14 +26,16 @@ namespace Slime
     }
 
     /// <summary>
-    /// Axis-aligned box obstacle in simulation space.
-    /// Built from Unity BoxColliders (world → sim via InvScale) and consumed by
-    /// UpdateJob for particle collision (AABB push-out). Matches the clousq
-    /// reference's MyBoxCollider.
+    /// Oriented box obstacle in simulation space.
+    /// Built from Unity static colliders and consumed by UpdateJob for particle
+    /// collision in collider-local space.
     /// </summary>
     public struct SlimeBoxCollider
     {
         public float3 Center;  // box centre, sim space
         public float3 Extent;  // half extents, sim space
+        public float3 AxisX;   // local +X axis, unit length
+        public float3 AxisY;   // local +Y axis, unit length
+        public float3 AxisZ;   // local +Z axis, unit length
     }
 }

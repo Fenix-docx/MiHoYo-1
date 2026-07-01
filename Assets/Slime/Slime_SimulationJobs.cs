@@ -350,6 +350,8 @@ namespace Slime
             [ReadOnly] public NativeArray<float3> PosOld;
             [WriteOnly] public NativeArray<float3> Velocity;
             public NativeArray<SlimeParticle> Ps;
+            public bool EnableFloor;
+            public float FloorY;
 
             public void Execute(int i)
             {
@@ -362,8 +364,8 @@ namespace Slime
                         p.Position = new float3(0f, 1f, 0f);
                 }
 
-                // Floor: keep particles above y = 1 (sim space) = y = 0.1 (world)
-                p.Position.y = max(1f, p.Position.y);
+                if (EnableFloor)
+                    p.Position.y = max(FloorY, p.Position.y);
 
                 // Two-pass collision so a single-axis push doesn't leave the particle
                 // inside another collider or skip a thin wall.
@@ -372,37 +374,40 @@ namespace Slime
                     for (int c = 0; c < Colliders.Length; c++)
                     {
                         SlimeBoxCollider box = Colliders[c];
-                        float3 boxMin = box.Center - box.Extent;
-                        float3 boxMax = box.Center + box.Extent;
+                        float3 axisX = SafeAxis(box.AxisX, new float3(1f, 0f, 0f));
+                        float3 axisY = SafeAxis(box.AxisY, new float3(0f, 1f, 0f));
+                        float3 axisZ = SafeAxis(box.AxisZ, new float3(0f, 0f, 1f));
+                        float3 extent = max(box.Extent, new float3(0.0001f));
 
-                        // ── Discrete check: particle is currently inside AABB ──
-                        float3 toCenter = p.Position - box.Center;
-                        float3 vec = abs(toCenter);
-                        bool inside = all(vec < box.Extent);
+                        // Discrete check: particle is currently inside the OBB.
+                        float3 local = WorldToObbLocal(p.Position, box.Center, axisX, axisY, axisZ);
+                        bool inside = all(abs(local) < extent);
 
                         if (inside)
                         {
-                            float3 remain = box.Extent - vec;
-                            bool3 pushAxis = new bool3(false, false, false);
+                            float3 remain = extent - abs(local);
                             int axis = 0;
                             if (remain.y < remain[axis]) axis = 1;
                             if (remain.z < remain[axis]) axis = 2;
-                            pushAxis[axis] = true;
-                            p.Position = select(p.Position, box.Center + sign(toCenter) * box.Extent, pushAxis);
+
+                            local[axis] = FaceSign(local[axis]) * extent[axis];
+                            p.Position = ObbLocalToWorld(local, box.Center, axisX, axisY, axisZ);
                             continue;
                         }
 
-                        // ── CCD: segment–AABB intersection (prevents tunneling) ──
-                        float3 disp = p.Position - oldPos;
+                        // CCD: segment-box intersection in OBB-local space.
+                        float3 localOld = WorldToObbLocal(oldPos, box.Center, axisX, axisY, axisZ);
+                        float3 localNow = local;
+                        float3 disp = localNow - localOld;
                         float dist = length(disp);
                         if (dist < 1e-6f)
                             continue;
 
-                        float3 dir = disp / dist; // unit direction
+                        float3 dir = disp / dist;
                         float3 invDir = select(1f / dir, 1e10f, abs(dir) < 1e-10f);
 
-                        float3 t0 = (boxMin - oldPos) * invDir;
-                        float3 t1 = (boxMax - oldPos) * invDir;
+                        float3 t0 = (-extent - localOld) * invDir;
+                        float3 t1 = (extent - localOld) * invDir;
                         float3 tNear = min(t0, t1);
                         float3 tFar = max(t0, t1);
                         float tEntry = max(max(tNear.x, tNear.y), tNear.z);
@@ -410,8 +415,9 @@ namespace Slime
 
                         if (tEntry <= tExit && tEntry >= 0f && tEntry < dist)
                         {
-                            // Hit — push particle just before entry point
-                            p.Position = oldPos + dir * max(0f, tEntry - 1e-3f);
+                            // Hit: push particle just before entry point.
+                            float3 localHit = localOld + dir * max(0f, tEntry - 1e-3f);
+                            p.Position = ObbLocalToWorld(localHit, box.Center, axisX, axisY, axisZ);
                         }
                     }
                 }
@@ -433,6 +439,30 @@ namespace Slime
             {
                 return IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
             }
+        }
+
+        static float3 SafeAxis(float3 axis, float3 fallback)
+        {
+            bool finite = !isnan(axis.x) && isfinite(axis.x) &&
+                          !isnan(axis.y) && isfinite(axis.y) &&
+                          !isnan(axis.z) && isfinite(axis.z);
+            return lengthsq(axis) > 1e-8f && finite ? normalize(axis) : fallback;
+        }
+
+        static float FaceSign(float value)
+        {
+            return value < 0f ? -1f : 1f;
+        }
+
+        static float3 WorldToObbLocal(float3 position, float3 center, float3 axisX, float3 axisY, float3 axisZ)
+        {
+            float3 offset = position - center;
+            return new float3(dot(offset, axisX), dot(offset, axisY), dot(offset, axisZ));
+        }
+
+        static float3 ObbLocalToWorld(float3 local, float3 center, float3 axisX, float3 axisY, float3 axisZ)
+        {
+            return center + axisX * local.x + axisY * local.y + axisZ * local.z;
         }
 
         // ── 8. XSPH viscosity ──
