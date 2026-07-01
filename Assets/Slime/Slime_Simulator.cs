@@ -367,15 +367,61 @@ namespace Slime
                 if (col.gameObject.scene != gameObject.scene)
                     continue;
 
-                Bounds bounds = col.bounds;
-                _colliderBuffer[writeIndex++] = new SlimeBoxCollider
-                {
-                    Center = (float3)bounds.center * SlimeConst.InvScale,
-                    Extent = (float3)bounds.extents * SlimeConst.InvScale + new float3(1f, 1f, 1f),
-                };
+                if (TryBuildBoxCollider(col, out SlimeBoxCollider slimeCollider))
+                    _colliderBuffer[writeIndex++] = slimeCollider;
+            }
+
+            if (writeIndex != count)
+            {
+                NativeArray<SlimeBoxCollider> compact = new NativeArray<SlimeBoxCollider>(writeIndex, Allocator.Persistent);
+                for (int i = 0; i < writeIndex; i++)
+                    compact[i] = _colliderBuffer[i];
+                _colliderBuffer.Dispose();
+                _colliderBuffer = compact;
+                count = writeIndex;
             }
 
             Debug.Log($"[SlimeSimulator] RebuildColliders: {count} static obstacle collider(s) collected (skipped {colliders.Length - count} with Rigidbody / trigger / disabled / other-scene).");
+        }
+
+        static bool TryBuildBoxCollider(Collider col, out SlimeBoxCollider slimeCollider)
+        {
+            slimeCollider = default;
+
+            Transform t = col.transform;
+            Bounds localBounds;
+            if (col is BoxCollider box)
+            {
+                localBounds = new Bounds(box.center, box.size);
+            }
+            else if (col is MeshCollider meshCollider && meshCollider.sharedMesh != null)
+            {
+                localBounds = meshCollider.sharedMesh.bounds;
+            }
+            else
+            {
+                Bounds bounds = col.bounds;
+                slimeCollider = new SlimeBoxCollider
+                {
+                    Center = (float3)bounds.center * SlimeConst.InvScale,
+                    Extent = (float3)bounds.extents * SlimeConst.InvScale + new float3(1f, 1f, 1f),
+                    AxisX = new float3(1f, 0f, 0f),
+                    AxisY = new float3(0f, 1f, 0f),
+                    AxisZ = new float3(0f, 0f, 1f),
+                };
+                return true;
+            }
+
+            float3 scale = abs((float3)t.lossyScale);
+            slimeCollider = new SlimeBoxCollider
+            {
+                Center = (float3)t.TransformPoint(localBounds.center) * SlimeConst.InvScale,
+                Extent = (float3)localBounds.extents * scale * SlimeConst.InvScale + new float3(1f, 1f, 1f),
+                AxisX = normalizesafe((float3)t.right, new float3(1f, 0f, 0f)),
+                AxisY = normalizesafe((float3)t.up, new float3(0f, 1f, 0f)),
+                AxisZ = normalizesafe((float3)t.forward, new float3(0f, 0f, 1f)),
+            };
+            return true;
         }
 
         void RebuildShapeTargetIfNeeded(bool force = false)
@@ -695,6 +741,8 @@ namespace Slime
                 PosOld = _posOld,
                 Colliders = _colliderBuffer,
                 Velocity = _velocityTempBuffer,
+                EnableFloor = !_colliderBuffer.IsCreated || _colliderBuffer.Length == 0,
+                FloorY = 1f,
             }.Schedule(_particles.Length, _batchCount).Complete();
 
             // 9. Viscosity

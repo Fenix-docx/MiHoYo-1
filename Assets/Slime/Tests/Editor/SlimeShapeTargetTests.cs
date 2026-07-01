@@ -700,6 +700,7 @@ namespace Slime.Tests
         {
             var tests = new SlimeStaticColliderCollectionTests();
             tests.RebuildCollidersIncludesStaticSceneMeshCollidersOutsideSimulatorHierarchy();
+            tests.RebuildCollidersPreservesStaticBoxColliderOrientation();
             tests.RebuildCollidersIgnoresDynamicRigidbodies();
         }
 
@@ -726,15 +727,51 @@ namespace Slime.Tests
                 Assert.That(colliders.IsCreated, Is.True);
                 Assert.That(colliders.Length, Is.EqualTo(1));
 
-                float3 expectedCenter = (float3)meshCollider.bounds.center * SlimeConst.InvScale;
-                float3 expectedExtent = (float3)meshCollider.bounds.extents * SlimeConst.InvScale + new float3(1f, 1f, 1f);
+                Bounds localBounds = mesh.bounds;
+                float3 expectedCenter = (float3)meshCollider.transform.TransformPoint(localBounds.center) * SlimeConst.InvScale;
+                float3 expectedExtent = (float3)localBounds.extents * math.abs((float3)meshCollider.transform.lossyScale) * SlimeConst.InvScale + new float3(1f, 1f, 1f);
 
                 Assert.That(math.distance(colliders[0].Center, expectedCenter), Is.LessThan(0.0001f));
                 Assert.That(math.distance(colliders[0].Extent, expectedExtent), Is.LessThan(0.0001f));
+                Assert.That(math.distance(colliders[0].AxisX, (float3)meshCollider.transform.right), Is.LessThan(0.0001f));
+                Assert.That(math.distance(colliders[0].AxisY, (float3)meshCollider.transform.up), Is.LessThan(0.0001f));
+                Assert.That(math.distance(colliders[0].AxisZ, (float3)meshCollider.transform.forward), Is.LessThan(0.0001f));
             }
             finally
             {
                 Object.DestroyImmediate(obstacle);
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
+        [Test]
+        public void RebuildCollidersPreservesStaticBoxColliderOrientation()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Simulator");
+            SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+
+            GameObject slope = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slope.transform.position = new Vector3(1f, 2f, 3f);
+            slope.transform.rotation = Quaternion.Euler(0f, 0f, 35f);
+            slope.transform.localScale = new Vector3(4f, 0.5f, 2f);
+
+            try
+            {
+                simulator.RebuildColliders();
+                NativeArray<SlimeBoxCollider> colliders = GetColliderBuffer(simulator);
+
+                Assert.That(colliders.IsCreated, Is.True);
+                Assert.That(colliders.Length, Is.EqualTo(1));
+
+                SlimeBoxCollider collider = colliders[0];
+                Assert.That(math.distance(collider.AxisX, (float3)slope.transform.right), Is.LessThan(0.0001f));
+                Assert.That(math.distance(collider.AxisY, (float3)slope.transform.up), Is.LessThan(0.0001f));
+                Assert.That(math.distance(collider.AxisZ, (float3)slope.transform.forward), Is.LessThan(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(slope);
                 Object.DestroyImmediate(simulatorObject);
             }
         }
@@ -769,11 +806,118 @@ namespace Slime.Tests
             }
         }
 
+        [Test]
+        public void UpdateJobPushesParticlesOutAlongObbSlopeNormal()
+        {
+            NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
+            NativeArray<float3> oldPositions = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<float3> velocities = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<SlimeBoxCollider> colliders = new NativeArray<SlimeBoxCollider>(1, Allocator.TempJob);
+
+            try
+            {
+                float angle = math.radians(45f);
+                float s = math.sin(angle);
+                float c = math.cos(angle);
+                float3 axisX = math.normalize(new float3(c, s, 0f));
+                float3 axisY = math.normalize(new float3(-s, c, 0f));
+                float3 axisZ = new float3(0f, 0f, 1f);
+                float3 center = new float3(0f, 2f, 0f);
+                float3 extent = new float3(2f, 0.25f, 2f);
+
+                float3 start = center + axisY * 0.05f;
+                float3 expected = center + axisY * extent.y;
+
+                particles[0] = new SlimeParticle { Position = start, ID = 0 };
+                oldPositions[0] = start;
+                colliders[0] = MakeCollider(center, extent, axisX, axisY, axisZ);
+
+                new SlimeSimulation.UpdateJob
+                {
+                    Ps = particles,
+                    PosOld = oldPositions,
+                    Colliders = colliders,
+                    Velocity = velocities,
+                }.Schedule(particles.Length, 1).Complete();
+
+                Assert.That(math.distance(particles[0].Position, expected), Is.LessThan(0.001f));
+            }
+            finally
+            {
+                particles.Dispose();
+                oldPositions.Dispose();
+                velocities.Dispose();
+                colliders.Dispose();
+            }
+        }
+
+        [Test]
+        public void UpdateJobAppliesFloorOnlyWhenEnabled()
+        {
+            NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
+            NativeArray<float3> oldPositions = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<float3> velocities = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<SlimeBoxCollider> colliders = new NativeArray<SlimeBoxCollider>(0, Allocator.TempJob);
+
+            try
+            {
+                float3 belowFloor = new float3(0f, 0.25f, 0f);
+                particles[0] = new SlimeParticle { Position = belowFloor, ID = 0 };
+                oldPositions[0] = belowFloor;
+
+                new SlimeSimulation.UpdateJob
+                {
+                    Ps = particles,
+                    PosOld = oldPositions,
+                    Colliders = colliders,
+                    Velocity = velocities,
+                    EnableFloor = false,
+                    FloorY = 1f,
+                }.Schedule(particles.Length, 1).Complete();
+
+                Assert.That(particles[0].Position.y, Is.EqualTo(belowFloor.y).Within(0.0001f));
+
+                particles[0] = new SlimeParticle { Position = belowFloor, ID = 0 };
+
+                new SlimeSimulation.UpdateJob
+                {
+                    Ps = particles,
+                    PosOld = oldPositions,
+                    Colliders = colliders,
+                    Velocity = velocities,
+                    EnableFloor = true,
+                    FloorY = 1f,
+                }.Schedule(particles.Length, 1).Complete();
+
+                Assert.That(particles[0].Position.y, Is.EqualTo(1f).Within(0.0001f));
+            }
+            finally
+            {
+                particles.Dispose();
+                oldPositions.Dispose();
+                velocities.Dispose();
+                colliders.Dispose();
+            }
+        }
+
         static NativeArray<SlimeBoxCollider> GetColliderBuffer(SlimeSimulator simulator)
         {
             FieldInfo field = typeof(SlimeSimulator).GetField("_colliderBuffer", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(field, Is.Not.Null);
             return (NativeArray<SlimeBoxCollider>)field.GetValue(simulator);
+        }
+
+        static SlimeBoxCollider MakeCollider(float3 center, float3 extent, float3 axisX, float3 axisY, float3 axisZ)
+        {
+            SlimeBoxCollider collider = new SlimeBoxCollider
+            {
+                Center = center,
+                Extent = extent,
+                AxisX = axisX,
+                AxisY = axisY,
+                AxisZ = axisZ,
+            };
+            return collider;
         }
     }
 }
