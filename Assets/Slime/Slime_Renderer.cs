@@ -25,17 +25,21 @@ namespace Slime
 
         public void Initialise(int particleCount)
         {
-            _count = particleCount;
-            _batchMatrices = new Matrix4x4[BATCH_SIZE];
+            _count = Mathf.Max(0, particleCount);
+            if (_batchMatrices == null || _batchMatrices.Length != BATCH_SIZE)
+                _batchMatrices = new Matrix4x4[BATCH_SIZE];
 
-            _material = CreateMaterial();
-            _mesh = CreateCubeMesh();
+            if (_material == null)
+                _material = CreateMaterial();
+            if (_mesh == null)
+                _mesh = CreateCubeMesh();
             _ready = true;
         }
 
         public void SetParticles(NativeArray<SlimeParticle> particles)
         {
             _particles = particles;
+            _count = particles.IsCreated ? particles.Length : 0;
         }
 
         void Update()

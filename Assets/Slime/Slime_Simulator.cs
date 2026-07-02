@@ -57,6 +57,7 @@ namespace Slime
         public bool simulateOnStart = true;
         // 暴露史莱姆的位置给相机
         public Vector3 CurrentWorldCenter { get; private set; }
+        public int ParticleCount => _particles.IsCreated ? _particles.Length : 0;
 
         // ── Native buffers ──
         NativeArray<SlimeParticle> _particles;
@@ -192,9 +193,95 @@ namespace Slime
             _initialised = true;
 
             _renderer = GetComponent<SlimeRenderer>();
-            _renderer?.Initialise(SlimeConst.Num);
+            _renderer?.Initialise(_particles.Length);
+            _renderer?.SetParticles(_particles);
 
             _surfaceBuilder = GetComponent<SlimeSurfaceBuilder>();
+        }
+
+        public int AddParticles(int count, Vector3 worldCenter, float worldRadius)
+        {
+            if (!_initialised || !_particles.IsCreated || count <= 0)
+                return 0;
+
+            int oldCount = _particles.Length;
+            int newCount = oldCount + count;
+            float3 spawnCenter = (float3)worldCenter * SlimeConst.InvScale;
+            if (!IsFinite(spawnCenter))
+                spawnCenter = IsFinite(_lastCom) ? _lastCom : ComputeParticleCenter();
+
+            float spawnRadius = max(worldRadius * SlimeConst.InvScale, SlimeConst.CellSize * 0.5f);
+            ResizeParticleBuffers(newCount);
+
+            float goldenAngle = PI * (3f - sqrt(5f));
+            for (int i = 0; i < count; i++)
+            {
+                int index = oldCount + i;
+                float t = (i + 0.5f) / count;
+                float y = 1f - 2f * t;
+                float r = sqrt(max(0f, 1f - y * y));
+                float theta = goldenAngle * index;
+                float shell = spawnRadius * pow(t, 1f / 3f);
+                float3 offset = new float3(cos(theta) * r, y, sin(theta) * r) * shell;
+                float3 position = spawnCenter + offset;
+                SlimeParticle particle = new SlimeParticle
+                {
+                    Position = position,
+                    ID = 0,
+                };
+
+                _particles[index] = particle;
+                _particlesTemp[index] = particle;
+                _posPredict[index] = position;
+                _posOld[index] = position;
+                _lambdaBuffer[index] = 0f;
+                _velocityBuffer[index] = new float3(0f, 0f, 0f);
+                _velocityTempBuffer[index] = new float3(0f, 0f, 0f);
+                _hashes[index] = new int2(0, index);
+                _shapeRestLocalPositions[index] = offset;
+                _shapeRestLocalPositionsShuffled[index] = offset;
+                _shapeRestMorphFrom[index] = offset;
+                _shapeRestMorphTo[index] = offset;
+            }
+
+            InitRestOffsets();
+            _restOffsetsShuffled.CopyFrom(_restOffsets);
+            _renderer?.SetParticles(_particles);
+            return count;
+        }
+
+        void ResizeParticleBuffers(int newCount)
+        {
+            ResizeNativeArray(ref _particles, newCount);
+            ResizeNativeArray(ref _particlesTemp, newCount);
+            ResizeNativeArray(ref _posPredict, newCount);
+            ResizeNativeArray(ref _posOld, newCount);
+            ResizeNativeArray(ref _lambdaBuffer, newCount);
+            ResizeNativeArray(ref _velocityBuffer, newCount);
+            ResizeNativeArray(ref _velocityTempBuffer, newCount);
+            ResizeNativeArray(ref _hashes, newCount);
+            ResizeNativeArray(ref _restOffsets, newCount);
+            ResizeNativeArray(ref _restOffsetsShuffled, newCount);
+            ResizeNativeArray(ref _shapeRestLocalPositions, newCount);
+            ResizeNativeArray(ref _shapeRestLocalPositionsShuffled, newCount);
+            ResizeNativeArray(ref _shapeRestMorphFrom, newCount);
+            ResizeNativeArray(ref _shapeRestMorphTo, newCount);
+
+            if (_lut.IsCreated)
+                _lut.Dispose();
+            _lut = new NativeHashMap<int, int2>(newCount, Allocator.Persistent);
+        }
+
+        static void ResizeNativeArray<T>(ref NativeArray<T> array, int newCount) where T : struct
+        {
+            NativeArray<T> resized = new NativeArray<T>(newCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            if (array.IsCreated)
+            {
+                NativeArray<T>.Copy(array, resized, Mathf.Min(array.Length, newCount));
+                array.Dispose();
+            }
+
+            array = resized;
         }
         #endregion  
         #region Particle spawn
@@ -452,7 +539,8 @@ namespace Slime
 
             if (!force && _shapeTarget.IsCreated && _activeShapeTargetMesh == resolvedShapeMesh &&
                 _activeShapeTargetTransform == resolvedShapeTransform &&
-                _activeShapeSdfResolution == shapeSdfResolution)
+                _activeShapeSdfResolution == shapeSdfResolution &&
+                _shapeTarget.RestLocalPositions.Length == _shapeRestLocalPositions.Length)
                 return;
 
             if (!SlimeShapeTarget.TryBuild(

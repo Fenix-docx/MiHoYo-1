@@ -1,46 +1,51 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
+using UnityEngine.Serialization;
 
 namespace Slime
 {
     [DisallowMultipleComponent]
-    [AddComponentMenu("Slime/Game Over On Slime Contact")]
+    [AddComponentMenu("Slime/Increase Particles On Slime Contact")]
     public class SlimeGameOverOnContact : MonoBehaviour
     {
         [Header("Slime Surface")]
         [SerializeField] SlimeSurfaceBuilder slimeSurface;
+        [SerializeField] SlimeSimulator slimeSimulator;
         [SerializeField] bool autoFindSlimeSurface = true;
         [SerializeField] bool includeChildColliders = true;
         [SerializeField, Min(0f)] float contactPadding = 0.05f;
         [SerializeField, Min(32)] int maxSurfaceVertexChecks = 4096;
 
-        [Header("Game Over")]
-        [SerializeField] bool pauseTimeOnGameOver = true;
-        [SerializeField] bool pauseEditorOnGameOver;
-        [SerializeField] bool quitApplicationInPlayer;
-        [SerializeField] UnityEvent onGameOver;
+        [Header("Particle Gain")]
+        [SerializeField, Min(1)] int particlesToAdd = 128;
+        [SerializeField, Min(0.01f)] float spawnRadius = 0.15f;
+        [Tooltip("0 means unlimited.")]
+        [SerializeField, Min(0)] int maxParticleCount = 4096;
+        [SerializeField] bool triggerOnce = true;
+        [SerializeField, Min(0f)] float repeatCooldown = 0.5f;
+        [FormerlySerializedAs("onGameOver")]
+        [SerializeField] UnityEvent onParticlesAdded;
 
         readonly List<Vector3> _surfaceVertices = new List<Vector3>(4096);
         Collider[] _targetColliders = new Collider[0];
-        bool _gameOver;
+        bool _hasTriggered;
+        float _lastTriggerTime = float.NegativeInfinity;
 
-        public bool HasGameOver => _gameOver;
-        public UnityEvent OnGameOver => onGameOver;
+        public bool HasTriggered => _hasTriggered;
+        public UnityEvent OnParticlesAdded => onParticlesAdded;
 
         void Awake()
         {
             CacheTargetColliders();
             ResolveSlimeSurface();
+            ResolveSlimeSimulator();
         }
 
         void OnEnable()
         {
-            _gameOver = false;
+            _hasTriggered = false;
+            _lastTriggerTime = float.NegativeInfinity;
             CacheTargetColliders();
         }
 
@@ -48,18 +53,22 @@ namespace Slime
         {
             contactPadding = Mathf.Max(0f, contactPadding);
             maxSurfaceVertexChecks = Mathf.Max(32, maxSurfaceVertexChecks);
+            particlesToAdd = Mathf.Max(1, particlesToAdd);
+            spawnRadius = Mathf.Max(0.01f, spawnRadius);
+            maxParticleCount = Mathf.Max(0, maxParticleCount);
+            repeatCooldown = Mathf.Max(0f, repeatCooldown);
         }
 
         void LateUpdate()
         {
-            if (_gameOver)
+            if (!CanTrigger())
                 return;
 
             if (slimeSurface == null && !ResolveSlimeSurface())
                 return;
 
-            if (TouchesCurrentSlimeSurface())
-                TriggerGameOver();
+            if (TouchesCurrentSlimeSurface(out Vector3 contactPoint))
+                TryAddParticles(contactPoint);
         }
 
         void OnCollisionEnter(Collision collision)
@@ -84,6 +93,12 @@ namespace Slime
 
         public bool TouchesCurrentSlimeSurface()
         {
+            return TouchesCurrentSlimeSurface(out _);
+        }
+
+        public bool TouchesCurrentSlimeSurface(out Vector3 contactPoint)
+        {
+            contactPoint = transform.position;
             if (slimeSurface == null || !slimeSurface.HasSurface)
                 return false;
 
@@ -117,43 +132,22 @@ namespace Slime
                 if (!targetBounds.Intersects(slimeBounds))
                     continue;
 
-                if (SurfaceTouchesCollider(targetCollider, targetBounds, padding))
+                if (SurfaceTouchesCollider(targetCollider, targetBounds, padding, out contactPoint))
                     return true;
             }
 
             return false;
         }
 
-        public void TriggerGameOver()
+        public void ResetTriggerState()
         {
-            if (_gameOver)
-                return;
-
-            _gameOver = true;
-            Debug.Log($"[SlimeGameOverOnContact] Game over: slime touched '{name}'.", this);
-            onGameOver?.Invoke();
-
-            if (pauseTimeOnGameOver)
-                Time.timeScale = 0f;
-
-#if UNITY_EDITOR
-            if (pauseEditorOnGameOver && Application.isPlaying)
-                EditorApplication.isPaused = true;
-#endif
-
-            if (quitApplicationInPlayer && !Application.isEditor)
-                Application.Quit();
+            _hasTriggered = false;
+            _lastTriggerTime = float.NegativeInfinity;
         }
 
-        public void ResetGameOverState(bool restoreTimeScale)
+        bool SurfaceTouchesCollider(Collider targetCollider, Bounds targetBounds, float padding, out Vector3 contactPoint)
         {
-            _gameOver = false;
-            if (restoreTimeScale)
-                Time.timeScale = 1f;
-        }
-
-        bool SurfaceTouchesCollider(Collider targetCollider, Bounds targetBounds, float padding)
-        {
+            contactPoint = transform.position;
             float sqrPadding = padding * padding;
             int stride = Mathf.Max(1, Mathf.CeilToInt(_surfaceVertices.Count / (float)maxSurfaceVertexChecks));
 
@@ -168,10 +162,36 @@ namespace Slime
 
                 Vector3 closest = targetCollider.ClosestPoint(point);
                 if ((closest - point).sqrMagnitude <= sqrPadding)
+                {
+                    contactPoint = point;
                     return true;
+                }
             }
 
             return false;
+        }
+
+        bool TryAddParticles(Vector3 contactPoint)
+        {
+            if (!CanTrigger() || !ResolveSlimeSimulator())
+                return false;
+
+            int requestedCount = particlesToAdd;
+            if (maxParticleCount > 0)
+                requestedCount = Mathf.Min(requestedCount, maxParticleCount - slimeSimulator.ParticleCount);
+
+            if (requestedCount <= 0)
+                return false;
+
+            int added = slimeSimulator.AddParticles(requestedCount, contactPoint, spawnRadius);
+            if (added <= 0)
+                return false;
+
+            _hasTriggered = true;
+            _lastTriggerTime = Time.time;
+            Debug.Log($"[SlimeGameOverOnContact] Added {added} slime particle(s) from '{name}'.", this);
+            onParticlesAdded?.Invoke();
+            return true;
         }
 
         bool ResolveSlimeSurface()
@@ -179,11 +199,30 @@ namespace Slime
             if (slimeSurface != null)
                 return true;
 
-            if (!autoFindSlimeSurface)
-                return false;
+            if (slimeSimulator != null)
+                slimeSurface = slimeSimulator.GetComponent<SlimeSurfaceBuilder>();
 
-            slimeSurface = Object.FindAnyObjectByType<SlimeSurfaceBuilder>(FindObjectsInactive.Exclude);
+            if (slimeSurface == null && autoFindSlimeSurface)
+                slimeSurface = Object.FindAnyObjectByType<SlimeSurfaceBuilder>(FindObjectsInactive.Exclude);
+
             return slimeSurface != null;
+        }
+
+        bool ResolveSlimeSimulator()
+        {
+            if (slimeSimulator != null)
+                return true;
+
+            if (slimeSurface != null)
+                slimeSimulator = slimeSurface.GetComponent<SlimeSimulator>();
+
+            if (slimeSimulator == null && autoFindSlimeSurface)
+                slimeSimulator = Object.FindAnyObjectByType<SlimeSimulator>(FindObjectsInactive.Exclude);
+
+            if (slimeSurface == null && slimeSimulator != null)
+                slimeSurface = slimeSimulator.GetComponent<SlimeSurfaceBuilder>();
+
+            return slimeSimulator != null;
         }
 
         void CacheTargetColliders()
@@ -195,10 +234,41 @@ namespace Slime
 
         void TryTriggerFromPhysics(Collider other)
         {
-            if (_gameOver || !IsSlimeObject(other))
+            if (!CanTrigger() || !IsSlimeObject(other))
                 return;
 
-            TriggerGameOver();
+            TryAddParticles(GetPhysicsContactPoint(other));
+        }
+
+        Vector3 GetPhysicsContactPoint(Collider other)
+        {
+            Collider ownCollider = GetFirstUsableTargetCollider();
+            if (ownCollider != null && other != null)
+                return ownCollider.ClosestPoint(other.bounds.center);
+
+            return other != null ? other.ClosestPoint(transform.position) : transform.position;
+        }
+
+        Collider GetFirstUsableTargetCollider()
+        {
+            if (_targetColliders == null || _targetColliders.Length == 0)
+                CacheTargetColliders();
+
+            for (int i = 0; i < _targetColliders.Length; i++)
+            {
+                if (IsUsable(_targetColliders[i]))
+                    return _targetColliders[i];
+            }
+
+            return null;
+        }
+
+        bool CanTrigger()
+        {
+            if (triggerOnce && _hasTriggered)
+                return false;
+
+            return repeatCooldown <= 0f || Time.time >= _lastTriggerTime + repeatCooldown;
         }
 
         static bool IsSlimeObject(Component component)
