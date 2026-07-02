@@ -252,7 +252,7 @@ namespace Slime
             int newCount = oldCount + count;
             float3 spawnCenter = (float3)worldCenter * SlimeConst.InvScale;
             if (!IsFinite(spawnCenter))
-                spawnCenter = IsFinite(_lastCom) ? _lastCom : ComputeParticleCenter();
+                spawnCenter = ComputeParticleCenter();
 
             float spawnRadius = max(worldRadius * SlimeConst.InvScale, SlimeConst.CellSize * 0.5f);
             ResizeParticleBuffers(newCount);
