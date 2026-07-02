@@ -3082,13 +3082,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1645875202}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0.47818983, w: 0.8782565}
+  m_LocalRotation: {x: -0, y: -0, z: -0.48702195, w: 0.8733898}
   m_LocalPosition: {x: 2.264, y: 0.372, z: 2.51}
-  m_LocalScale: {x: 0.15224428, y: 3.2944698, z: 3.9921}
+  m_LocalScale: {x: 0.15224428, y: 3.415377, z: 4.162563}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -57.134}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -58.29}
 --- !u!1 &1691534850
 GameObject:
   m_ObjectHideFlags: 0
@@ -3764,6 +3764,14 @@ MonoBehaviour:
   controllerBody: {fileID: 0}
   velocityFollowGain: 0.5
   moveCoreRadius: 1.5
+  splitFraction: 0.25
+  splitSeparation: 5
+  minParticlesToSplit: 128
+  absorbContactSlack: 0.5
+  absorbCooldownTime: 0.5
+  absorbRearmSlack: 1
+  keySplit: 102
+  keySwitchControl: 9
   keyDecreaseBoth: 91
   keyIncreaseBoth: 93
   concentrationStep: 4

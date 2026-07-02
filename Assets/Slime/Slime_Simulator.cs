@@ -47,6 +47,24 @@ namespace Slime
         [Tooltip("Only particles within this sim-space radius of the blob COM receive the controller pull force. 0 = apply to all (legacy).")]
         [Range(0f, 5f)] public float moveCoreRadius = 1.5f;
 
+        [Header("Split / Absorb")]
+        [Tooltip("Fraction of the controlled body peeled off on each split (0.1 = 10% of particles).")]
+        [Range(0.05f, 0.5f)] public float splitFraction = 0.25f;
+        [Tooltip("One-time sim-space offset the split body is placed ahead along the facing direction. Separates the bodies cleanly with no impulse (no drift / continuous force).")]
+        [Min(0f)] public float splitSeparation = 5f;
+        [Tooltip("Minimum particles a body must keep / peel to allow a split.")]
+        [Min(16)] public int minParticlesToSplit = 128;
+        [Tooltip("Extra sim-space slack beyond the two bodies' radii for absorb contact to trigger.")]
+        [Min(0f)] public float absorbContactSlack = 0.5f;
+        [Tooltip("Seconds after a split during which absorb is disabled, so the ejection can separate the bodies.")]
+        [Min(0f)] public float absorbCooldownTime = 0.5f;
+        [Tooltip("Extra distance beyond contact threshold a split pair must reach before it can absorb again.")]
+        [Min(0f)] public float absorbRearmSlack = 1f;
+        [Tooltip("Key to split the controlled body. Facing direction comes from the main camera.")]
+        public KeyCode keySplit = KeyCode.F;
+        [Tooltip("Key to cycle control between split bodies.")]
+        public KeyCode keySwitchControl = KeyCode.Tab;
+
         [Header("Keyboard")]
         public KeyCode keyDecreaseBoth = KeyCode.LeftBracket;
         public KeyCode keyIncreaseBoth = KeyCode.RightBracket;
@@ -70,13 +88,21 @@ namespace Slime
         NativeHashMap<int, int2> _lut;
         NativeArray<int2> _hashes;
         NativeList<SlimeController> _controllerBuffer;
-        NativeArray<float3> _restOffsets;         // original order (identity-keyed)
+        NativeArray<float3> _restOffsets;         // current shape rest offsets, aligned to _particles
         NativeArray<float3> _restOffsetsShuffled; // cell-grouped order (matches _particles after shuffle)
+        NativeArray<float3> _initialRestOffsets;  // canonical initial full-body shape, aligned to _particles
+        NativeArray<float3> _initialRestOffsetsShuffled;
         NativeArray<float3> _shapeRestLocalPositions;
         NativeArray<float3> _shapeRestLocalPositionsShuffled;
         NativeArray<float3> _shapeRestMorphFrom;
         NativeArray<float3> _shapeRestMorphTo;
         NativeArray<SlimeBoxCollider> _colliderBuffer;
+        NativeArray<float3> _groupCentres;   // per-group COM sums (length MaxGroups)
+        NativeArray<float3> _groupRestCentres; // per-group canonical rest-offset sums
+        NativeArray<int> _groupCounts;       // per-group particle counts (length MaxGroups)
+        NativeArray<float> _groupStiffness;  // per-group shape-match stiffness (length MaxGroups)
+        NativeArray<int> _shuffledIds;       // particle IDs in cell-grouped (shuffled) order
+        SlimeGroupManager _groups;
         SlimeShapeTarget _shapeTarget;
         Mesh _activeShapeTargetMesh;
         Transform _activeShapeTargetTransform;
@@ -87,7 +113,7 @@ namespace Slime
         float3 _shapeLocalCenter;
         Vector3 _lastTransformPosition;
         bool _hasLastTransformPosition;
-        float3 _lastCom; // cached COM for core-driven locomotion
+        float _absorbCooldown; // >0 suppresses absorb right after a split
 
         int _batchCount = 64;
         SlimeRenderer _renderer;
@@ -104,7 +130,7 @@ namespace Slime
         void Update()
         {
             if (!_initialised) return;
-            
+
 
             if (Input.GetKeyDown(KeyCode.Q)&& isQ)
             {
@@ -118,6 +144,14 @@ namespace Slime
                 shapeStiffness = min(1f, shapeStiffness + stiffnessStep);
                 isQ = true;
             }
+
+            // F: peel a fraction of the controlled body into a new split body.
+            if (Input.GetKeyDown(keySplit))
+                Split(GetFacingDirection());
+
+            // Tab: cycle control to the next alive body.
+            if (Input.GetKeyDown(keySwitchControl))
+                SwitchControl();
         }
 
         void FixedUpdate()
@@ -133,6 +167,7 @@ namespace Slime
                 Simulate();
 
             Control();
+            UpdateAbsorb();
 
             if (enableSurface && _surfaceBuilder)
                 _surfaceBuilder.BuildSurface(_particles, isoLevel);
@@ -164,10 +199,18 @@ namespace Slime
             _controllerBuffer = new NativeList<SlimeController>(16, Allocator.Persistent);
             _restOffsets = new NativeArray<float3>(n, Allocator.Persistent);
             _restOffsetsShuffled = new NativeArray<float3>(n, Allocator.Persistent);
+            _initialRestOffsets = new NativeArray<float3>(n, Allocator.Persistent);
+            _initialRestOffsetsShuffled = new NativeArray<float3>(n, Allocator.Persistent);
             _shapeRestLocalPositions = new NativeArray<float3>(n, Allocator.Persistent);
             _shapeRestLocalPositionsShuffled = new NativeArray<float3>(n, Allocator.Persistent);
             _shapeRestMorphFrom = new NativeArray<float3>(n, Allocator.Persistent);
             _shapeRestMorphTo = new NativeArray<float3>(n, Allocator.Persistent);
+            _groupCentres = new NativeArray<float3>(SlimeGroupManager.MaxGroups, Allocator.Persistent);
+            _groupRestCentres = new NativeArray<float3>(SlimeGroupManager.MaxGroups, Allocator.Persistent);
+            _groupCounts = new NativeArray<int>(SlimeGroupManager.MaxGroups, Allocator.Persistent);
+            _groupStiffness = new NativeArray<float>(SlimeGroupManager.MaxGroups, Allocator.Persistent);
+            _shuffledIds = new NativeArray<int>(n, Allocator.Persistent);
+            _groups = new SlimeGroupManager();
 
             // Single controller covering the whole initial blob
             _controllerBuffer.Add(new SlimeController
@@ -177,6 +220,7 @@ namespace Slime
                 Velocity = new float3(0f, 0f, 0f),
                 Concentration = concentration,
             });
+            _groups.Init(concentration, shapeStiffness);
 
             // Interaction: auto-find a Rigidbody motor if none assigned.
             if (controllerBody == null)
@@ -469,11 +513,25 @@ namespace Slime
 
             center /= _particles.Length;
 
-            _lastCom = center; // seed core-driven locomotion
             CurrentWorldCenter = (Vector3)(center * SlimeConst.Scale);
 
+            // Seed per-group COM (group 0 = whole blob at init) so the first
+            // ApplyForceJob has a valid core-weight reference.
+            for (int g = 0; g < _groupCentres.Length; g++)
+            {
+                _groupCentres[g] = new float3(0f, 0f, 0f);
+                _groupCounts[g] = 0;
+            }
+            _groupCentres[0] = center * _particles.Length;
+            _groupCounts[0] = _particles.Length;
+            _groupStiffness[0] = shapeStiffness;
+
             for (int i = 0; i < _particles.Length; i++)
-                _restOffsets[i] = _particles[i].Position - center;
+            {
+                float3 restOffset = _particles[i].Position - center;
+                _restOffsets[i] = restOffset;
+                _initialRestOffsets[i] = restOffset;
+            }
 
             if (_controllerBuffer.IsCreated && _controllerBuffer.Length > 0)
             {
@@ -793,7 +851,9 @@ namespace Slime
                 Velocity = _velocityBuffer,
                 Gravity = new float3(0f, gravity, 0f),
                 VelocityFollowGain = velocityFollowGain,
-                BlobCenter = _lastCom,
+                ControlledGroupId = _groups.ControlledGroupId,
+                GroupCentres = _groupCentres,
+                GroupCounts = _groupCounts,
                 MoveCoreRadius = moveCoreRadius,
             }.Schedule(_particles.Length, _batchCount).Complete();
 
@@ -815,6 +875,8 @@ namespace Slime
             // 4. Shuffle (including rest offsets for shape matching)
             var snapRest = new NativeArray<float3>(_particles.Length, Allocator.TempJob);
             snapRest.CopyFrom(_restOffsets);
+            var snapInitialRest = new NativeArray<float3>(_particles.Length, Allocator.TempJob);
+            snapInitialRest.CopyFrom(_initialRestOffsets);
             var snapShapeRest = new NativeArray<float3>(_particles.Length, Allocator.TempJob);
             snapShapeRest.CopyFrom(_shapeRestLocalPositions);
             var snapShapeMorphFrom = new NativeArray<float3>(_particles.Length, Allocator.TempJob);
@@ -829,6 +891,7 @@ namespace Slime
                 PsNew = _particlesTemp,
                 Velocity = _velocityBuffer,
                 RestOffsets = snapRest,
+                InitialRestOffsets = snapInitialRest,
                 ShapeRestLocalPositions = snapShapeRest,
                 ShapeRestMorphFrom = snapShapeMorphFrom,
                 ShapeRestMorphTo = snapShapeMorphTo,
@@ -836,12 +899,15 @@ namespace Slime
                 PosPredict = _posPredict,
                 VelocityOut = _velocityTempBuffer,
                 RestOffsetsOut = _restOffsetsShuffled,
+                InitialRestOffsetsOut = _initialRestOffsetsShuffled,
                 ShapeRestLocalPositionsOut = _shapeRestLocalPositionsShuffled,
                 ShapeRestMorphFromOut = _shapeRestMorphFrom,
                 ShapeRestMorphToOut = _shapeRestMorphTo,
+                IdsOut = _shuffledIds,
             }.Schedule(_particles.Length, _batchCount).Complete();
 
             snapRest.Dispose();
+            snapInitialRest.Dispose();
             snapShapeRest.Dispose();
             snapShapeMorphFrom.Dispose();
             snapShapeMorphTo.Dispose();
@@ -851,6 +917,7 @@ namespace Slime
             {
                 Lut = _lut,
                 PosPredict = _posPredict,
+                Ids = _shuffledIds,
                 Lambda = _lambdaBuffer,
             }.Schedule(_particles.Length, _batchCount).Complete();
 
@@ -860,24 +927,28 @@ namespace Slime
                 Lut = _lut,
                 PosPredict = _posPredict,
                 Lambda = _lambdaBuffer,
+                Ids = _shuffledIds,
                 PsNew = _particles,
             }.Schedule(_particles.Length, _batchCount).Complete();
 
             // 7. Static mesh shape target: XPBD-style position projection.
             if (HasShapeTarget())
             {
-                var center = new NativeArray<float3>(1, Allocator.TempJob);
+                // Recompute per-group COM (positions changed during the solve) so
+                // each group projects against its own centre.
                 new SlimeCohesion.ComputeCenterJob
                 {
                     Particles = _particles,
-                    Center = center,
+                    Centres = _groupCentres,
+                    Counts = _groupCounts,
                 }.Schedule().Complete();
 
                 new SlimeSimulation.ApplyShapeTargetJob
                 {
                     Particles = _particles,
                     RestLocalPositions = _shapeRestLocalPositionsShuffled,
-                    Center = center,
+                    Centres = _groupCentres,
+                    Counts = _groupCounts,
                     Sdf = _shapeTarget.Sdf,
                     SdfInfo = _shapeTarget.SdfInfo,
                     LocalToSimVector = GetShapeLocalToSim(),
@@ -889,8 +960,6 @@ namespace Slime
                     DisableBoundaryProjection = !_shapeTarget.IsClosedVolume,
                     DeltaTime = SlimeConst.DeltaTime,
                 }.Schedule(_particles.Length, _batchCount).Complete();
-
-                center.Dispose();
             }
 
             // 8. Update: floor + collider push-out + velocity reconstruction + clamp
@@ -910,12 +979,14 @@ namespace Slime
                 Lut = _lut,
                 PosPredict = _posPredict,
                 VelocityR = _velocityTempBuffer,
+                Ids = _shuffledIds,
                 VelocityW = _velocityBuffer,
                 ViscosityStrength = viscosityStrength,
             }.Schedule(_particles.Length, _batchCount).Complete();
 
             // Sync restOffsets to current (cell-grouped) order for next sub-step
             _restOffsets.CopyFrom(_restOffsetsShuffled);
+            _initialRestOffsets.CopyFrom(_initialRestOffsetsShuffled);
             _shapeRestLocalPositions.CopyFrom(_shapeRestLocalPositionsShuffled);
         }
         #endregion  
@@ -935,11 +1006,18 @@ namespace Slime
             if (_controllerBuffer.IsCreated) _controllerBuffer.Dispose();
             if (_restOffsets.IsCreated) _restOffsets.Dispose();
             if (_restOffsetsShuffled.IsCreated) _restOffsetsShuffled.Dispose();
+            if (_initialRestOffsets.IsCreated) _initialRestOffsets.Dispose();
+            if (_initialRestOffsetsShuffled.IsCreated) _initialRestOffsetsShuffled.Dispose();
             if (_shapeRestLocalPositions.IsCreated) _shapeRestLocalPositions.Dispose();
             if (_shapeRestLocalPositionsShuffled.IsCreated) _shapeRestLocalPositionsShuffled.Dispose();
             if (_shapeRestMorphFrom.IsCreated) _shapeRestMorphFrom.Dispose();
             if (_shapeRestMorphTo.IsCreated) _shapeRestMorphTo.Dispose();
             if (_colliderBuffer.IsCreated) _colliderBuffer.Dispose();
+            if (_groupCentres.IsCreated) _groupCentres.Dispose();
+            if (_groupRestCentres.IsCreated) _groupRestCentres.Dispose();
+            if (_groupCounts.IsCreated) _groupCounts.Dispose();
+            if (_groupStiffness.IsCreated) _groupStiffness.Dispose();
+            if (_shuffledIds.IsCreated) _shuffledIds.Dispose();
             if (_shapeTarget.IsCreated) _shapeTarget.Dispose();
             _activeShapeTargetMesh = null;
             _activeShapeTargetTransform = null;
@@ -967,50 +1045,184 @@ namespace Slime
         {
             if (_controllerBuffer.Length == 0) return;
 
-            // 1. Compute current centre of mass (from shuffled particles — order-independent)
-            var center = new NativeArray<float3>(1, Allocator.TempJob);
+            // 1. Per-group centre-of-mass (order-independent; particles are shuffled).
             new SlimeCohesion.ComputeCenterJob
             {
                 Particles = _particles,
-                Center = center,
+                Centres = _groupCentres,
+                Counts = _groupCounts,
             }.Schedule().Complete();
 
-            _lastCom = center[0]; // cache for next frame's core-driven locomotion
-            CurrentWorldCenter = (Vector3)center[0] * SlimeConst.Scale;
+            // 2. Keep the controller list large enough for every allocated slot.
+            while (_controllerBuffer.Length < _groups.SlotCount)
+                _controllerBuffer.Add(new SlimeController());
 
-            // 2. Motor drives the cohesion centre directly (WASD → position).
-            //    When no motor is assigned, the blob stays self-cohesive at its own COM.
-            var ctrl = _controllerBuffer[0];
-            ctrl.Concentration = concentration;
-            if (controllerBody != null)
-            {
-                ctrl.Center = (float3)controllerBody.position * SlimeConst.InvScale;
-                ctrl.Radius = SlimeConst.InvScale * 5f; // keep whole blob in range
-                ctrl.Velocity = (float3)controllerBody.linearVelocity * SlimeConst.InvScale;
-            }
-            else
-            {
-                ctrl.Center = center[0];
-                ctrl.Radius = SlimeConst.InvScale;
-                ctrl.Velocity = new float3(0f, 0f, 0f);
-            }
-            _controllerBuffer[0] = ctrl;
+            int ctrlId = _groups.ControlledGroupId;
+            _groups.SetControlledConcentration(concentration);
+            _groups.SetControlledStiffness(shapeStiffness);
 
-            // 3. Shape matching (translation-only)
+            float3 controlledCom = new float3(0f, 0f, 0f);
+            for (int g = 0; g < _groups.SlotCount; g++)
+            {
+                SlimeController c = _controllerBuffer[g];
+                if (!_groups.IsAlive(g))
+                {
+                    // Dead slot: neutralise so any stray reference is harmless.
+                    c.Center = new float3(0f, 0f, 0f);
+                    c.Radius = 0f;
+                    c.Velocity = new float3(0f, 0f, 0f);
+                    c.Concentration = 0f;
+                    _controllerBuffer[g] = c;
+                    _groupStiffness[g] = 0f;
+                    continue;
+                }
+
+                float3 com = _groupCounts[g] > 0 ? _groupCentres[g] / _groupCounts[g] : new float3(0f, 0f, 0f);
+                c.Concentration = _groups.GetConcentration(g);
+                _groupStiffness[g] = _groups.GetStiffness(g);
+
+                if (g == ctrlId)
+                {
+                    controlledCom = com;
+                    // Motor drives the controlled group's cohesion centre (WASD → position).
+                    if (controllerBody != null)
+                    {
+                        c.Center = (float3)controllerBody.position * SlimeConst.InvScale;
+                        c.Radius = SlimeConst.InvScale * 5f; // keep whole blob in range
+                        c.Velocity = (float3)controllerBody.linearVelocity * SlimeConst.InvScale;
+                    }
+                    else
+                    {
+                        c.Center = com;
+                        c.Radius = SlimeConst.InvScale;
+                        c.Velocity = new float3(0f, 0f, 0f);
+                    }
+                }
+                else
+                {
+                    // Non-controlled group: self-cohere around its own COM, no motion.
+                    c.Center = com;
+                    c.Radius = SlimeConst.InvScale * 2f;
+                    c.Velocity = new float3(0f, 0f, 0f);
+                }
+                _controllerBuffer[g] = c;
+            }
+
+            CurrentWorldCenter = (Vector3)controlledCom * SlimeConst.Scale;
+
+            // 3. Shape matching (translation-only, per group)
             if (enableShapeMatch && !HasShapeTarget())
             {
+                new SlimeCohesion.ComputeRestCenterJob
+                {
+                    Particles = _particles,
+                    RestOffsets = _restOffsetsShuffled,
+                    RestCentres = _groupRestCentres,
+                }.Schedule().Complete();
+
                 new SlimeCohesion.ApplyShapeMatchJob
                 {
                     RestOffsets = _restOffsetsShuffled,
-                    Center = center,
+                    RestCentres = _groupRestCentres,
+                    Centres = _groupCentres,
+                    Counts = _groupCounts,
+                    Stiffness = _groupStiffness,
                     Particles = _particles,
                     Velocity = _velocityBuffer,
-                    stiffness = shapeStiffness,
                     inverseDt = 1f / SlimeConst.DeltaTime,
                 }.Schedule(_particles.Length, _batchCount).Complete();
             }
+        }
 
-            center.Dispose();
+        /// <summary>Currently controlled group id (the body the motor drives).</summary>
+        public int ControlledGroupId => _groups != null ? _groups.ControlledGroupId : 0;
+
+        /// <summary>Number of alive split bodies (including the original).</summary>
+        public int AliveGroupCount => _groups != null ? _groups.AliveCount : 1;
+
+        /// <summary>
+        /// Horizontal facing direction (world space, normalised) used to aim splits.
+        /// Falls back to the controller motor's facing, then world forward.
+        /// </summary>
+        Vector3 GetFacingDirection()
+        {
+            Vector3 forward = Vector3.forward;
+            if (Camera.main != null) forward = Camera.main.transform.forward;
+            else if (controllerBody != null) forward = controllerBody.transform.forward;
+            forward.y = 0f;
+            return forward.sqrMagnitude > 1e-4f ? forward.normalized : Vector3.forward;
+        }
+
+        /// <summary>
+        /// Split the controlled body. A fraction of particles (the front-most along
+        /// <paramref name="facingWorld"/>) peel off into a new body. Each resulting
+        /// body receives a compact local rest shape, like the reference component
+        /// controllers, so neither body keeps a sliced/full-body rest target.
+        /// </summary>
+        public bool Split(Vector3 facingWorld)
+        {
+            if (!_initialised || _groups == null) return false;
+            float3 facing = (float3)facingWorld; // direction only — scale-invariant
+            int sourceGroup = _groups.ControlledGroupId;
+            int newGroup = _groups.Split(
+                _particles, _velocityBuffer,
+                facing, splitFraction, splitSeparation, minParticlesToSplit);
+            if (newGroup < 0) return false;
+
+            SlimeGroupManager.WriteCompactRestOffsets(
+                _restOffsets, _particles, sourceGroup, _particles.Length);
+            SlimeGroupManager.WriteCompactRestOffsets(
+                _restOffsets, _particles, newGroup, _particles.Length);
+
+            // Ensure the controller list has a slot for the new group before the
+            // next Simulate() reads it (Control() pads too, but Simulate runs first).
+            while (_controllerBuffer.Length < _groups.SlotCount)
+                _controllerBuffer.Add(new SlimeController());
+
+            // Brief absorb cooldown so the separation has time to take effect
+            // before contact-detection can re-merge the bodies.
+            _absorbCooldown = absorbCooldownTime;
+            return true;
+        }
+
+        /// <summary>Cycle motor control to the next alive body.</summary>
+        public int SwitchControl()
+        {
+            if (!_initialised || _groups == null) return 0;
+            int previousId = _groups.ControlledGroupId;
+            int newId = _groups.SwitchControl();
+
+            // Snap the kinematic motor to the newly controlled body so movement
+            // resumes from its position instead of teleporting the blob.
+            if (newId != previousId && controllerBody != null)
+            {
+                SlimeGroupManager.GroupBounds(_particles, newId, out float3 com, out _, out int count);
+                if (count > 0)
+                {
+                    Vector3 worldCom = (Vector3)(com * SlimeConst.Scale);
+                    worldCom.y = max(worldCom.y, controllerBody.transform.position.y);
+                    controllerBody.transform.position = worldCom;
+                    if (controllerBody is Rigidbody rb)
+                        rb.linearVelocity = Vector3.zero;
+                }
+            }
+            return newId;
+        }
+
+        /// <summary>
+        /// Absorb check: if the controlled body contacts another body, merge it.
+        /// Called automatically from FixedUpdate after simulation. Suppressed for
+        /// a short window after each split so the ejection can separate the bodies.
+        /// </summary>
+        void UpdateAbsorb()
+        {
+            if (_absorbCooldown > 0f)
+                _absorbCooldown = max(0f, _absorbCooldown - Time.fixedDeltaTime);
+            if (_groups == null || _groups.AliveCount <= 1 || _absorbCooldown > 0f) return;
+
+            int target = _groups.FindAbsorbTarget(_particles, absorbContactSlack, absorbRearmSlack);
+            if (target >= 0)
+                _groups.Absorb(_particles, _restOffsets, _initialRestOffsets, _velocityBuffer, target);
         }
     }
 }

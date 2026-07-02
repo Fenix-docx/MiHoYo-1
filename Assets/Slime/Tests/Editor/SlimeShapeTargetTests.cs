@@ -96,20 +96,31 @@ namespace Slime.Tests
         public void PbfJobsKeepOverlappingParticlesFinite()
         {
             NativeHashMap<int, int2> lut = new NativeHashMap<int, int2>(1, Allocator.TempJob);
+            NativeArray<int2> hashes = new NativeArray<int2>(2, Allocator.TempJob);
             NativeArray<float3> positions = new NativeArray<float3>(2, Allocator.TempJob);
             NativeArray<float> lambda = new NativeArray<float>(2, Allocator.TempJob);
+            NativeArray<SlimeParticle> sourceParticles = new NativeArray<SlimeParticle>(2, Allocator.TempJob);
             NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(2, Allocator.TempJob);
+            NativeArray<int> ids = new NativeArray<int>(2, Allocator.TempJob);
 
             try
             {
                 positions[0] = float3.zero;
                 positions[1] = float3.zero;
-                lut.Add(SlimeConst.GetKey(SlimeConst.GetCoord(float3.zero)), new int2(0, 2));
+                int key = SlimeConst.GetKey(SlimeConst.GetCoord(float3.zero));
+                hashes[0] = new int2(key, 0);
+                hashes[1] = new int2(key, 1);
+                sourceParticles[0] = new SlimeParticle { Position = positions[0], ID = 3 };
+                sourceParticles[1] = new SlimeParticle { Position = positions[1], ID = 4 };
+                ids[0] = 3;
+                ids[1] = 4;
+                lut.Add(key, new int2(0, 2));
 
                 new SlimeSimulation.ComputeLambdaJob
                 {
                     Lut = lut,
                     PosPredict = positions,
+                    Ids = ids,
                     Lambda = lambda,
                 }.Schedule(positions.Length, 1).Complete();
 
@@ -119,20 +130,27 @@ namespace Slime.Tests
                 new SlimeSimulation.ComputeDeltaPosJob
                 {
                     Lut = lut,
+
                     PosPredict = positions,
                     Lambda = lambda,
+                    Ids = ids,
                     PsNew = particles,
                 }.Schedule(positions.Length, 1).Complete();
 
                 Assert.That(IsFinite(particles[0].Position), Is.True);
                 Assert.That(IsFinite(particles[1].Position), Is.True);
+                Assert.That(particles[0].ID, Is.EqualTo(3));
+                Assert.That(particles[1].ID, Is.EqualTo(4));
             }
             finally
             {
                 lut.Dispose();
+                hashes.Dispose();
                 positions.Dispose();
                 lambda.Dispose();
+                sourceParticles.Dispose();
                 particles.Dispose();
+                ids.Dispose();
             }
         }
 
@@ -229,20 +247,23 @@ namespace Slime.Tests
         {
             NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
             NativeArray<float3> restLocal = new NativeArray<float3>(1, Allocator.TempJob);
-            NativeArray<float3> center = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<float3> centres = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<int> counts = new NativeArray<int>(1, Allocator.TempJob);
             NativeArray<float> sdf = new NativeArray<float>(0, Allocator.TempJob);
 
             try
             {
                 particles[0] = new SlimeParticle { Position = new float3(1f, 2f, 3f), ID = 0 };
                 restLocal[0] = new float3(float.NaN, 0f, 0f);
-                center[0] = float3.zero;
+                centres[0] = float3.zero;
+                counts[0] = 1;
 
                 new SlimeSimulation.ApplyShapeTargetJob
                 {
                     Particles = particles,
                     RestLocalPositions = restLocal,
-                    Center = center,
+                    Centres = centres,
+                    Counts = counts,
                     Sdf = sdf,
                     SdfInfo = default,
                     LocalToSimVector = float4x4.identity,
@@ -261,7 +282,8 @@ namespace Slime.Tests
             {
                 particles.Dispose();
                 restLocal.Dispose();
-                center.Dispose();
+                centres.Dispose();
+                counts.Dispose();
                 sdf.Dispose();
             }
         }
@@ -272,20 +294,23 @@ namespace Slime.Tests
             using SlimeShapeTarget target = SlimeShapeTarget.Build(CreateOpenSquareMesh(), 1, 12, Allocator.TempJob);
             NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
             NativeArray<float3> restLocal = new NativeArray<float3>(1, Allocator.TempJob);
-            NativeArray<float3> center = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<float3> centres = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<int> counts = new NativeArray<int>(1, Allocator.TempJob);
 
             try
             {
                 float3 position = new float3(0f, target.SdfInfo.CellSize * 0.5f, 0f);
                 particles[0] = new SlimeParticle { Position = position, ID = 0 };
                 restLocal[0] = position;
-                center[0] = float3.zero;
+                centres[0] = float3.zero;
+                counts[0] = 1;
 
                 new SlimeSimulation.ApplyShapeTargetJob
                 {
                     Particles = particles,
                     RestLocalPositions = restLocal,
-                    Center = center,
+                    Centres = centres,
+                    Counts = counts,
                     Sdf = target.Sdf,
                     SdfInfo = target.SdfInfo,
                     LocalToSimVector = float4x4.identity,
@@ -304,7 +329,8 @@ namespace Slime.Tests
             {
                 particles.Dispose();
                 restLocal.Dispose();
-                center.Dispose();
+                centres.Dispose();
+                counts.Dispose();
             }
         }
 
@@ -370,19 +396,22 @@ namespace Slime.Tests
             using SlimeShapeTarget target = SlimeShapeTarget.Build(CreateCubeMesh(), 1, 18, Allocator.TempJob);
             NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
             NativeArray<float3> restLocal = new NativeArray<float3>(1, Allocator.TempJob);
-            NativeArray<float3> center = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<float3> centres = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<int> counts = new NativeArray<int>(1, Allocator.TempJob);
 
             try
             {
                 particles[0] = new SlimeParticle { Position = new float3(4f, 0f, 0f), ID = 0 };
                 restLocal[0] = float3.zero;
-                center[0] = float3.zero;
+                centres[0] = float3.zero;
+                counts[0] = 1;
 
                 new SlimeSimulation.ApplyShapeTargetJob
                 {
                     Particles = particles,
                     RestLocalPositions = restLocal,
-                    Center = center,
+                    Centres = centres,
+                    Counts = counts,
                     Sdf = target.Sdf,
                     SdfInfo = target.SdfInfo,
                     LocalToSimVector = float4x4.identity,
@@ -401,7 +430,8 @@ namespace Slime.Tests
             {
                 particles.Dispose();
                 restLocal.Dispose();
-                center.Dispose();
+                centres.Dispose();
+                counts.Dispose();
             }
         }
 
@@ -411,19 +441,22 @@ namespace Slime.Tests
             using SlimeShapeTarget target = SlimeShapeTarget.Build(CreateCubeMesh(), 1, 18, Allocator.TempJob);
             NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
             NativeArray<float3> restLocal = new NativeArray<float3>(1, Allocator.TempJob);
-            NativeArray<float3> center = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<float3> centres = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<int> counts = new NativeArray<int>(1, Allocator.TempJob);
 
             try
             {
                 particles[0] = new SlimeParticle { Position = new float3(10f, 0f, 0f), ID = 0 };
                 restLocal[0] = float3.zero;
-                center[0] = new float3(5f, 0f, 0f);
+                centres[0] = new float3(5f, 0f, 0f);
+                counts[0] = 1;
 
                 new SlimeSimulation.ApplyShapeTargetJob
                 {
                     Particles = particles,
                     RestLocalPositions = restLocal,
-                    Center = center,
+                    Centres = centres,
+                    Counts = counts,
                     Sdf = target.Sdf,
                     SdfInfo = target.SdfInfo,
                     LocalToSimVector = float4x4.identity,
@@ -435,14 +468,15 @@ namespace Slime.Tests
                     DeltaTime = SlimeConst.DeltaTime,
                 }.Schedule(particles.Length, 1).Complete();
 
-                Assert.That(math.distance(particles[0].Position, center[0]), Is.LessThan(0.001f));
+                Assert.That(math.distance(particles[0].Position, centres[0]), Is.LessThan(0.001f));
                 Assert.That(math.distance(particles[0].Position, float3.zero), Is.GreaterThan(4.9f));
             }
             finally
             {
                 particles.Dispose();
                 restLocal.Dispose();
-                center.Dispose();
+                centres.Dispose();
+                counts.Dispose();
             }
         }
 
@@ -452,19 +486,22 @@ namespace Slime.Tests
             using SlimeShapeTarget target = SlimeShapeTarget.Build(CreateCubeMesh(), 1, 18, Allocator.TempJob);
             NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
             NativeArray<float3> restLocal = new NativeArray<float3>(1, Allocator.TempJob);
-            NativeArray<float3> center = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<float3> centres = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<int> counts = new NativeArray<int>(1, Allocator.TempJob);
 
             try
             {
                 particles[0] = new SlimeParticle { Position = new float3(10f, 0f, 0f), ID = 0 };
                 restLocal[0] = new float3(2f, 0f, 0f);
-                center[0] = new float3(5f, 0f, 0f);
+                centres[0] = new float3(5f, 0f, 0f);
+                counts[0] = 1;
 
                 new SlimeSimulation.ApplyShapeTargetJob
                 {
                     Particles = particles,
                     RestLocalPositions = restLocal,
-                    Center = center,
+                    Centres = centres,
+                    Counts = counts,
                     Sdf = target.Sdf,
                     SdfInfo = target.SdfInfo,
                     LocalToSimVector = float4x4.identity,
@@ -476,13 +513,14 @@ namespace Slime.Tests
                     DeltaTime = SlimeConst.DeltaTime,
                 }.Schedule(particles.Length, 1).Complete();
 
-                Assert.That(math.distance(particles[0].Position, center[0]), Is.LessThan(0.001f));
+                Assert.That(math.distance(particles[0].Position, centres[0]), Is.LessThan(0.001f));
             }
             finally
             {
                 particles.Dispose();
                 restLocal.Dispose();
-                center.Dispose();
+                centres.Dispose();
+                counts.Dispose();
             }
         }
 
@@ -492,19 +530,22 @@ namespace Slime.Tests
             using SlimeShapeTarget target = SlimeShapeTarget.Build(CreateCubeMesh(), 1, 18, Allocator.TempJob);
             NativeArray<SlimeParticle> particles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
             NativeArray<float3> restLocal = new NativeArray<float3>(1, Allocator.TempJob);
-            NativeArray<float3> center = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<float3> centres = new NativeArray<float3>(1, Allocator.TempJob);
+            NativeArray<int> counts = new NativeArray<int>(1, Allocator.TempJob);
 
             try
             {
                 particles[0] = new SlimeParticle { Position = new float3(9f, 0f, 0f), ID = 0 };
                 restLocal[0] = new float3(4f, 0f, 0f);
-                center[0] = new float3(5f, 0f, 0f);
+                centres[0] = new float3(5f, 0f, 0f);
+                counts[0] = 1;
 
                 new SlimeSimulation.ApplyShapeTargetJob
                 {
                     Particles = particles,
                     RestLocalPositions = restLocal,
-                    Center = center,
+                    Centres = centres,
+                    Counts = counts,
                     Sdf = target.Sdf,
                     SdfInfo = target.SdfInfo,
                     LocalToSimVector = float4x4.identity,
@@ -516,7 +557,7 @@ namespace Slime.Tests
                     DeltaTime = SlimeConst.DeltaTime,
                 }.Schedule(particles.Length, 1).Complete();
 
-                float3 local = particles[0].Position - center[0];
+                float3 local = particles[0].Position - centres[0];
                 Assert.That(SlimeShapeTarget.SampleSdf(target.Sdf, target.SdfInfo, local), Is.LessThanOrEqualTo(0f));
                 Assert.That(math.distance(particles[0].Position, float3.zero), Is.GreaterThan(4f));
             }
@@ -524,7 +565,8 @@ namespace Slime.Tests
             {
                 particles.Dispose();
                 restLocal.Dispose();
-                center.Dispose();
+                centres.Dispose();
+                counts.Dispose();
             }
         }
 

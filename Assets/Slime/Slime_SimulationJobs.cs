@@ -25,12 +25,17 @@ namespace Slime
             public float3 Gravity;
             public float VelocityFollowGain; // locomotion: blend toward controller velocity (0 = off)
 
+            /// <summary>Group currently under player control. Only this group receives
+            /// velocity-follow (movement). Other groups self-cohere but are not driven.</summary>
+            public int ControlledGroupId;
+
             /// <summary>
-            /// Blob centre of mass (sim-space). Used to compute the core-driven
-            /// locomotion falloff: particles near the COM receive full velocity
-            /// blend, particles at the periphery follow via PBF constraints.
+            /// Per-group resolved centres of mass (sim-space). Used to compute the
+            /// core-driven locomotion falloff per group: particles near their own
+            /// group COM receive full velocity blend, periphery follows via PBF.
             /// </summary>
-            public float3 BlobCenter;
+            [ReadOnly] public NativeArray<float3> GroupCentres; // length MaxGroups
+            [ReadOnly] public NativeArray<int> GroupCounts;     // length MaxGroups
             public float MoveCoreRadius; // sim units; 0 = uniform (apply to all particles)
 
             public void Execute(int i)
@@ -53,13 +58,18 @@ namespace Slime
                     float3 toCenter = controllerCenter - p.Position;
                     float len = length(toCenter);
 
-                    // Core-driven locomotion weight: 1.0 at blob centre, falls off
-                    // linearly to 0 at MoveCoreRadius. Particles beyond the core
-                    // radius receive no velocity blend and follow via PBF constraints.
-                    float distToBlobCenter = length(p.Position - BlobCenter);
+                    // Core-driven locomotion weight, evaluated against the particle's
+                    // OWN group COM (not a global blob centre) so a split-off group's
+                    // periphery is never driven by the main body's motion.
+                    float3 groupCom = controllerCenter;
+                    if (GroupCentres.IsCreated && (uint)p.ID < (uint)GroupCentres.Length && GroupCounts[p.ID] > 0)
+                        groupCom = GroupCentres[p.ID];
+                    float distToGroupCom = length(p.Position - groupCom);
                     float coreWeight = MoveCoreRadius <= 0f ? 1f :
-                        saturate(1f - distToBlobCenter / max(MoveCoreRadius, 0.001f));
+                        saturate(1f - distToGroupCom / max(MoveCoreRadius, 0.001f));
 
+                    // Centre-attraction (cohesion) acts on every group toward its own
+                    // controller centre — split-off slime stays self-cohesive.
                     if (len < controllerRadius)
                     {
                         velocity = lerp(controllerVelocity, velocity,
@@ -68,10 +78,11 @@ namespace Slime
                                     min(1f, len) * normalizesafe(toCenter);
                     }
 
-                    // Core-driven locomotion: only particles near the blob COM
-                    // adopt the controller's velocity. The centre leads, the
-                    // periphery follows via PBF density constraints.
-                    if (VelocityFollowGain > 0f && lengthsq(controllerVelocity) > 1e-6f)
+                    // Velocity-follow (locomotion) is restricted to the controlled
+                    // group. Split-off groups have controllerVelocity = 0 and are
+                    // additionally gated out here so no motion bleeds into them.
+                    if (p.ID == ControlledGroupId &&
+                        VelocityFollowGain > 0f && lengthsq(controllerVelocity) > 1e-6f)
                         velocity = lerp(velocity, controllerVelocity,
                             VelocityFollowGain * coreWeight);
                 }
@@ -146,6 +157,7 @@ namespace Slime
             [ReadOnly] public NativeArray<SlimeParticle> PsNew;
             [ReadOnly] public NativeArray<float3> Velocity;
             [ReadOnly] public NativeArray<float3> RestOffsets;
+            [ReadOnly] public NativeArray<float3> InitialRestOffsets;
             [ReadOnly] public NativeArray<float3> ShapeRestLocalPositions;
             [ReadOnly] public NativeArray<float3> ShapeRestMorphFrom;
             [ReadOnly] public NativeArray<float3> ShapeRestMorphTo;
@@ -154,9 +166,11 @@ namespace Slime
             [WriteOnly] public NativeArray<float3> PosPredict;
             [WriteOnly] public NativeArray<float3> VelocityOut;
             [WriteOnly] public NativeArray<float3> RestOffsetsOut;
+            [WriteOnly] public NativeArray<float3> InitialRestOffsetsOut;
             [WriteOnly] public NativeArray<float3> ShapeRestLocalPositionsOut;
             [WriteOnly] public NativeArray<float3> ShapeRestMorphFromOut;
             [WriteOnly] public NativeArray<float3> ShapeRestMorphToOut;
+            [WriteOnly] public NativeArray<int> IdsOut; // shuffled particle group IDs
 
             public void Execute(int i)
             {
@@ -165,9 +179,12 @@ namespace Slime
                 PosOld[i] = PsRaw[id].Position;
                 VelocityOut[i] = Velocity[id];
                 RestOffsetsOut[i] = RestOffsets[id];
+                if (InitialRestOffsets.IsCreated && InitialRestOffsetsOut.IsCreated)
+                    InitialRestOffsetsOut[i] = InitialRestOffsets[id];
                 ShapeRestLocalPositionsOut[i] = ShapeRestLocalPositions[id];
                 ShapeRestMorphFromOut[i] = ShapeRestMorphFrom[id];
                 ShapeRestMorphToOut[i] = ShapeRestMorphTo[id];
+                IdsOut[i] = PsNew[id].ID;
             }
         }
 
@@ -178,12 +195,14 @@ namespace Slime
         {
             [ReadOnly] public NativeHashMap<int, int2> Lut;
             [ReadOnly] public NativeArray<float3> PosPredict;
+            [ReadOnly] public NativeArray<int> Ids; // shuffled group IDs (group-aware PBF)
             [WriteOnly] public NativeArray<float> Lambda;
 
             public void Execute(int i)
             {
                 float3 pos = PosPredict[i];
                 int3 coord = SlimeConst.GetCoord(pos);
+                int id = Ids[i];
 
                 float rho = 0f;
                 float3 grad_i = new float3(0f, 0f, 0f);
@@ -200,6 +219,10 @@ namespace Slime
                     for (int j = range.x; j < range.y; j++)
                     {
                         if (i == j) continue;
+                        // Group-aware PBF: a split body is an independent fluid —
+                        // particles only feel density/pressure from their OWN group,
+                        // so separate bodies neither push nor drag each other.
+                        if (Ids[j] != id) continue;
 
                         float3 dir = pos - PosPredict[j];
                         float r2 = lengthsq(dir);
@@ -228,6 +251,7 @@ namespace Slime
             [ReadOnly] public NativeHashMap<int, int2> Lut;
             [ReadOnly] public NativeArray<float3> PosPredict;
             [ReadOnly] public NativeArray<float> Lambda;
+            [ReadOnly] public NativeArray<int> Ids; // shuffled group IDs
             [WriteOnly] public NativeArray<SlimeParticle> PsNew;
 
             public void Execute(int i)
@@ -236,6 +260,7 @@ namespace Slime
                 float3 dp = new float3(0f, 0f, 0f);
 
                 float lam = Lambda[i];
+                int id = Ids[i];
                 int3 coord = SlimeConst.GetCoord(position);
 
                 for (int dz = -1; dz <= 1; dz++)
@@ -249,6 +274,8 @@ namespace Slime
                     for (int j = range.x; j < range.y; j++)
                     {
                         if (i == j) continue;
+                        // Group-aware PBF: skip other groups (independent fluids).
+                        if (Ids[j] != id) continue;
 
                         float3 dir = position - PosPredict[j];
                         float r2 = dot(dir, dir);
@@ -263,10 +290,13 @@ namespace Slime
 
                 dp /= SlimeConst.TargetDensity;
 
+                // Preserve the particle's group ID through the PBF solve — it was
+                // previously hard-coded to 0, which silently erased split/absorb
+                // group assignment every sub-step.
                 PsNew[i] = new SlimeParticle
                 {
                     Position = position - dp,
-                    ID = 0,
+                    ID = Ids[i],
                 };
             }
         }
@@ -278,7 +308,8 @@ namespace Slime
         {
             public NativeArray<SlimeParticle> Particles;
             [ReadOnly] public NativeArray<float3> RestLocalPositions;
-            [ReadOnly] public NativeArray<float3> Center;
+            [ReadOnly] public NativeArray<float3> Centres; // length MaxGroups — running sums
+            [ReadOnly] public NativeArray<int> Counts;     // length MaxGroups
             [ReadOnly] public NativeArray<float> Sdf;
             public SlimeShapeSdfInfo SdfInfo;
             public float4x4 LocalToSimVector;
@@ -296,7 +327,10 @@ namespace Slime
                     return;
 
                 SlimeParticle particle = Particles[i];
-                float3 center = Center.IsCreated && Center.Length > 0 ? Center[0] : new float3(0f, 0f, 0f);
+                int g = particle.ID;
+                float3 center = new float3(0f, 0f, 0f);
+                if (Centres.IsCreated && (uint)g < (uint)Centres.Length && Counts[g] > 0)
+                    center = Centres[g] / Counts[g];
                 if (!IsFinite(particle.Position) || !IsFinite(center))
                     return;
 
@@ -473,6 +507,7 @@ namespace Slime
             [ReadOnly] public NativeHashMap<int, int2> Lut;
             [ReadOnly] public NativeArray<float3> PosPredict;
             [ReadOnly] public NativeArray<float3> VelocityR;
+            [ReadOnly] public NativeArray<int> Ids; // shuffled group IDs (group-aware)
             [WriteOnly] public NativeArray<float3> VelocityW;
             public float ViscosityStrength;
 
@@ -480,6 +515,7 @@ namespace Slime
             {
                 float3 pos = PosPredict[i];
                 int3 coord = SlimeConst.GetCoord(pos);
+                int id = Ids[i];
                 float3 viscosityForce = new float3(0f, 0f, 0f);
                 float3 vel = VelocityR[i];
 
@@ -494,6 +530,9 @@ namespace Slime
                     for (int j = range.x; j < range.y; j++)
                     {
                         if (i == j) continue;
+                        // Group-aware: viscosity only blends velocities within a
+                        // body, so a split body's motion stays independent.
+                        if (Ids[j] != id) continue;
 
                         float3 dir = pos - PosPredict[j];
                         float r2 = lengthsq(dir);
