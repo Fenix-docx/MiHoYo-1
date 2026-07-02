@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.IO;
 using System.Reflection;
 using Unity.Collections;
 using Unity.Jobs;
@@ -1006,6 +1007,42 @@ namespace Slime.Tests
     public class CameraFollowSlimeTests
     {
         [Test]
+        public void GameplayScenesUseSlimeCameraFollowStack()
+        {
+            string cameraScriptGuid = UnityEditor.AssetDatabase.AssetPathToGUID("Assets/Slime/CameraFollow_Slime.cs");
+            Assert.That(cameraScriptGuid, Is.Not.Empty);
+
+            string[] scenePaths =
+            {
+                "Assets/Slime/Slime_Greybox.unity",
+                "Assets/Slime/Slime_Test.unity",
+            };
+
+            foreach (string scenePath in scenePaths)
+            {
+                string sceneYaml = File.ReadAllText(scenePath);
+
+                Assert.That(
+                    CountOccurrences(sceneYaml, $"guid: {cameraScriptGuid}"),
+                    Is.EqualTo(1),
+                    $"{scenePath} should have exactly one Slime.CameraFollow_Slime component.");
+                Assert.That(sceneYaml, Does.Contain("m_EditorClassIdentifier: Assembly-CSharp::Slime.CameraFollow_Slime"), scenePath);
+                Assert.That(sceneYaml, Does.Contain("slimeSimulator: {fileID: 1763104530}"), scenePath);
+                Assert.That(sceneYaml, Does.Contain("inputEnable: 1"), scenePath);
+                Assert.That(sceneYaml, Does.Contain("enableZoom: 1"), scenePath);
+                Assert.That(sceneYaml, Does.Contain("minZoomDistance: 2"), scenePath);
+                Assert.That(sceneYaml, Does.Contain("maxZoomDistance: 10"), scenePath);
+
+                Assert.That(sceneYaml, Does.Not.Contain("m_EditorClassIdentifier: Assembly-CSharp::CameraFollow"), scenePath);
+                Assert.That(sceneYaml, Does.Not.Contain("guid: a4b0bee7499ae87489fb1045a6102383"), scenePath);
+                Assert.That(sceneYaml, Does.Not.Contain("m_EditorClassIdentifier: Assembly-CSharp::InputManager"), scenePath);
+                Assert.That(sceneYaml, Does.Not.Contain("guid: 2d53caca97428ed46b4f0c915b9f29bf"), scenePath);
+                Assert.That(sceneYaml, Does.Not.Contain("jumpKey:"), scenePath);
+                Assert.That(sceneYaml, Does.Not.Contain("interactKey:"), scenePath);
+            }
+        }
+
+        [Test]
         public void LateUpdateWithoutSimulatorDoesNotThrow()
         {
             GameObject cameraObject = new GameObject("Slime Camera Follow Test");
@@ -1022,6 +1059,34 @@ namespace Slime.Tests
             {
                 Object.DestroyImmediate(cameraObject);
             }
+        }
+
+        [Test]
+        public void MouseInputMapsHorizontalToYawAndVerticalToPitch()
+        {
+            float verticalAngle = 0f;
+            float horizontalAngle = 0f;
+
+            CameraFollow_Slime.ApplyOrbitInput(
+                ref verticalAngle,
+                ref horizontalAngle,
+                mouseX: 2f,
+                mouseY: 3f,
+                horizontalSpeed: 4f,
+                verticalSpeed: 5f,
+                minVerticalAngle: -30f,
+                maxVerticalAngle: 60f);
+
+            Assert.That(horizontalAngle, Is.EqualTo(8f).Within(0.0001f));
+            Assert.That(verticalAngle, Is.EqualTo(-15f).Within(0.0001f));
+        }
+
+        [Test]
+        public void ScrollWheelZoomClampsCameraDistance()
+        {
+            Assert.That(CameraFollow_Slime.CalculateZoomDistance(5f, 0.5f, 4f, 2f, 10f), Is.EqualTo(3f).Within(0.0001f));
+            Assert.That(CameraFollow_Slime.CalculateZoomDistance(5f, -2f, 4f, 2f, 10f), Is.EqualTo(10f).Within(0.0001f));
+            Assert.That(CameraFollow_Slime.CalculateZoomDistance(5f, 2f, 4f, 2f, 10f), Is.EqualTo(2f).Within(0.0001f));
         }
 
         [Test]
@@ -1048,6 +1113,20 @@ namespace Slime.Tests
             Assert.That(adjusted.x, Is.EqualTo(0f).Within(0.0001f));
             Assert.That(adjusted.y, Is.EqualTo(0f).Within(0.0001f));
             Assert.That(adjusted.z, Is.EqualTo(-1.8f).Within(0.0001f));
+        }
+
+        static int CountOccurrences(string value, string search)
+        {
+            int count = 0;
+            int index = 0;
+
+            while ((index = value.IndexOf(search, index, System.StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += search.Length;
+            }
+
+            return count;
         }
     }
 }
