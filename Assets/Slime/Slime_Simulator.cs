@@ -55,6 +55,8 @@ namespace Slime
 
         [Header("Debug")]
         public bool simulateOnStart = true;
+        // 暴露史莱姆的位置给相机
+        public Vector3 CurrentWorldCenter { get; private set; }
 
         // ── Native buffers ──
         NativeArray<SlimeParticle> _particles;
@@ -93,6 +95,7 @@ namespace Slime
         bool isQ = true;
         void Start()
         {
+            CurrentWorldCenter = transform.position;
             if (simulateOnStart)
                 Initialise();
         }
@@ -313,6 +316,7 @@ namespace Slime
             center /= _particles.Length;
 
             _lastCom = center; // seed core-driven locomotion
+            CurrentWorldCenter = (Vector3)(center * SlimeConst.Scale);
 
             for (int i = 0; i < _particles.Length; i++)
                 _restOffsets[i] = _particles[i].Position - center;
@@ -817,6 +821,7 @@ namespace Slime
             }.Schedule().Complete();
 
             _lastCom = center[0]; // cache for next frame's core-driven locomotion
+            CurrentWorldCenter = (Vector3)center[0] * SlimeConst.Scale;
 
             // 2. Motor drives the cohesion centre directly (WASD → position).
             //    When no motor is assigned, the blob stays self-cohesive at its own COM.

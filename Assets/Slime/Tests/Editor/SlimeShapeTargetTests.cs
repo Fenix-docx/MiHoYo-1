@@ -920,4 +920,66 @@ namespace Slime.Tests
             return collider;
         }
     }
+
+    public class SlimeControllerMotorTests
+    {
+        [Test]
+        public void MovementInputUsesMotorObjectSpace()
+        {
+            GameObject motorObject = new GameObject("Slime Controller Motor Direction Test");
+
+            try
+            {
+                motorObject.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+
+                Vector3 velocity = SlimeControllerMotor.CalculatePlanarMoveVelocity(
+                    motorObject.transform,
+                    Vector2.up,
+                    3f);
+
+                Assert.That(velocity.x, Is.EqualTo(3f).Within(0.0001f));
+                Assert.That(velocity.y, Is.EqualTo(0f).Within(0.0001f));
+                Assert.That(velocity.z, Is.EqualTo(0f).Within(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(motorObject);
+            }
+        }
+
+        [Test]
+        public void CameraForwardDefinesMotorFacing()
+        {
+            Quaternion rotation = SlimeControllerMotor.CalculateCameraFacingRotation(
+                Quaternion.identity,
+                new Vector3(1f, -0.5f, 0f));
+            Vector3 forward = rotation * Vector3.forward;
+
+            Assert.That(forward.x, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(forward.y, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(forward.z, Is.EqualTo(0f).Within(0.0001f));
+        }
+    }
+
+    public class CameraFollowSlimeTests
+    {
+        [Test]
+        public void LateUpdateWithoutSimulatorDoesNotThrow()
+        {
+            GameObject cameraObject = new GameObject("Slime Camera Follow Test");
+
+            try
+            {
+                CameraFollow_Slime follow = cameraObject.AddComponent<CameraFollow_Slime>();
+                MethodInfo method = typeof(CameraFollow_Slime).GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(method, Is.Not.Null);
+
+                Assert.DoesNotThrow(() => method.Invoke(follow, null));
+            }
+            finally
+            {
+                Object.DestroyImmediate(cameraObject);
+            }
+        }
+    }
 }

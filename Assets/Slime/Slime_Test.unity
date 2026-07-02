@@ -338,7 +338,7 @@ Transform:
   m_GameObject: {fileID: 645600557}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.14999998, y: 0.623, z: -2.3166}
+  m_LocalPosition: {x: -0.14999998, y: -0.07300002, z: -2.3166}
   m_LocalScale: {x: 0.15224428, y: 0.06932, z: 3.9921}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -450,7 +450,7 @@ Transform:
   m_GameObject: {fileID: 930609112}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.7730001, y: 0.623, z: -2.3166}
+  m_LocalPosition: {x: 0.7730001, y: -0.07300002, z: -2.3166}
   m_LocalScale: {x: 0.15224428, y: 0.06932, z: 3.9921}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -468,6 +468,7 @@ GameObject:
   - component: {fileID: 939962729}
   - component: {fileID: 939962728}
   - component: {fileID: 939962731}
+  - component: {fileID: 939962732}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -688,6 +689,27 @@ MonoBehaviour:
       data1: 0
       data2: 0
   defaultFrameSettings: 0
+--- !u!114 &939962732
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 939962727}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4b0bee7499ae87489fb1045a6102383, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
+  target: {fileID: 1763104532}
+  followSpeed: 5
+  rotationSpeed: 3
+  cameraOffset: {x: 0, y: 2, z: -5}
+  horizontalRotateSpeed: 3
+  verticalRotateSpeed: 2
+  minVerticalAngle: -30
+  maxVerticalAngle: 60
+  smoothTime: 0.3
 --- !u!1 &1054888402
 GameObject:
   m_ObjectHideFlags: 0
@@ -794,8 +816,55 @@ Transform:
   m_GameObject: {fileID: 1054888402}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.025, y: 0.623, z: -2.3166}
+  m_LocalPosition: {x: 2.025, y: -0.07300002, z: -2.3166}
   m_LocalScale: {x: 0.15224428, y: 0.06932, z: 3.9921}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1147581787
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1147581789}
+  - component: {fileID: 1147581788}
+  m_Layer: 0
+  m_Name: Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1147581788
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1147581787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d53caca97428ed46b4f0c915b9f29bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InputManager
+  jumpKey: 32
+  interactKey: 101
+  inputEnable: 1
+--- !u!4 &1147581789
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1147581787}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.93163, y: -0.1, z: -5.15881}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -906,7 +975,7 @@ Transform:
   m_GameObject: {fileID: 1239110067}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.26, y: 0.623, z: -2.3166}
+  m_LocalPosition: {x: 1.26, y: -0.07300002, z: -2.3166}
   m_LocalScale: {x: 0.15224428, y: 0.06932, z: 3.9921}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1257,7 +1326,7 @@ Transform:
   m_GameObject: {fileID: 1691534850}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.236, y: 0.623, z: -2.3166}
+  m_LocalPosition: {x: -1.236, y: -0.073, z: -2.3166}
   m_LocalScale: {x: 0.15224428, y: 0.06932, z: 3.9921}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1368,13 +1437,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1745482111}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.66799986, y: 0.623, z: -2.3166}
-  m_LocalScale: {x: 0.15224428, y: 0.06932, z: 3.9921}
+  m_LocalRotation: {x: -0, y: -0, z: 0.1773308, w: 0.9841513}
+  m_LocalPosition: {x: -0.66799986, y: 0.37, z: -2.3166}
+  m_LocalScale: {x: 18.838707, y: 0.06932, z: 3.9921}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 20.429}
 --- !u!1 &1754528758
 GameObject:
   m_ObjectHideFlags: 0
@@ -1481,7 +1550,7 @@ Transform:
   m_GameObject: {fileID: 1754528758}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.32299995, y: 0.623, z: -2.3166}
+  m_LocalPosition: {x: 0.32299995, y: -0.07300002, z: -2.3166}
   m_LocalScale: {x: 0.15224428, y: 0.06932, z: 3.9921}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1601,6 +1670,11 @@ MonoBehaviour:
   isoLevel: 1
   controllerBody: {fileID: 0}
   velocityFollowGain: 0.5
+  moveCoreRadius: 1.5
+  keyDecreaseBoth: 91
+  keyIncreaseBoth: 93
+  concentrationStep: 4
+  stiffnessStep: 0.1
   simulateOnStart: 1
 --- !u!4 &1763104532
 Transform:
@@ -1715,7 +1789,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Slime.SlimeControllerMotor
   moveSpeed: 3
   jumpSpeed: 3
-  gravity: -8
+  facingCamera: {fileID: 0}
   groundY: 0.5
 --- !u!54 &1763104538
 Rigidbody:
@@ -1850,7 +1924,7 @@ Transform:
   m_GameObject: {fileID: 2057171237}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.6730001, y: 0.623, z: -2.3166}
+  m_LocalPosition: {x: 1.6730001, y: -0.07300002, z: -2.3166}
   m_LocalScale: {x: 0.15224428, y: 0.06932, z: 3.9921}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1873,3 +1947,4 @@ SceneRoots:
   - {fileID: 645600561}
   - {fileID: 1754528762}
   - {fileID: 1745482115}
+  - {fileID: 1147581789}
