@@ -981,5 +981,31 @@ namespace Slime.Tests
                 Object.DestroyImmediate(cameraObject);
             }
         }
+
+        [Test]
+        public void CollisionAdjustmentMovesCameraInFrontOfObstacle()
+        {
+            MethodInfo method = typeof(CameraFollow_Slime).GetMethod(
+                "CalculateCollisionAdjustedPosition",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null);
+
+            object[] args =
+            {
+                Vector3.zero,
+                new Vector3(0f, 0f, -5f),
+                2f,
+                0.2f,
+                0.15f,
+                false
+            };
+
+            Vector3 adjusted = (Vector3)method.Invoke(null, args);
+
+            Assert.That((bool)args[5], Is.True);
+            Assert.That(adjusted.x, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(adjusted.y, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(adjusted.z, Is.EqualTo(-1.8f).Within(0.0001f));
+        }
     }
 }
