@@ -19,6 +19,9 @@ namespace Slime
         MeshFilter _mf;
         MeshRenderer _mr;
 
+        public Mesh CurrentSurfaceMesh => _mesh;
+        public bool HasSurface => _mesh != null && _mesh.vertexCount > 0;
+
         void Awake()
         {
             _mf = GetComponent<MeshFilter>();
