@@ -250,6 +250,73 @@ namespace Slime
             return count;
         }
 
+        public int AddParticlesDistributed(int count, float worldJitterRadius)
+        {
+            if (!_initialised || !_particles.IsCreated || count <= 0)
+                return 0;
+
+            int oldCount = _particles.Length;
+            if (oldCount <= 0)
+                return 0;
+
+            int newCount = oldCount + count;
+            float jitterRadius = max(worldJitterRadius * SlimeConst.InvScale, SlimeConst.CellSize * 0.1f);
+            ResizeParticleBuffers(newCount);
+
+            for (int i = 0; i < count; i++)
+            {
+                int sourceIndex = GetDistributedSourceIndex(i, count, oldCount);
+                int index = oldCount + i;
+                float3 sourcePosition = _particles[sourceIndex].Position;
+                float3 offset = LowDiscrepancyBallOffset(index, jitterRadius);
+                float3 position = sourcePosition + offset;
+                SlimeParticle particle = new SlimeParticle
+                {
+                    Position = position,
+                    ID = _particles[sourceIndex].ID,
+                };
+
+                _particles[index] = particle;
+                _particlesTemp[index] = particle;
+                _posPredict[index] = position;
+                _posOld[index] = position;
+                _lambdaBuffer[index] = 0f;
+                _velocityBuffer[index] = _velocityBuffer[sourceIndex];
+                _velocityTempBuffer[index] = _velocityTempBuffer[sourceIndex];
+                _hashes[index] = new int2(0, index);
+                _shapeRestLocalPositions[index] = _shapeRestLocalPositions[sourceIndex];
+                _shapeRestLocalPositionsShuffled[index] = _shapeRestLocalPositionsShuffled[sourceIndex];
+                _shapeRestMorphFrom[index] = _shapeRestMorphFrom[sourceIndex];
+                _shapeRestMorphTo[index] = _shapeRestMorphTo[sourceIndex];
+            }
+
+            InitRestOffsets();
+            _restOffsetsShuffled.CopyFrom(_restOffsets);
+            _renderer?.SetParticles(_particles);
+            return count;
+        }
+
+        static int GetDistributedSourceIndex(int addIndex, int addCount, int sourceCount)
+        {
+            if (sourceCount <= 1)
+                return 0;
+
+            float t = (addIndex + 0.5f) / max(1, addCount);
+            return clamp((int)floor(t * sourceCount), 0, sourceCount - 1);
+        }
+
+        static float3 LowDiscrepancyBallOffset(int sequenceIndex, float radius)
+        {
+            const float goldenRatioConjugate = 0.61803398875f;
+            const float secondIrrational = 0.75487766625f;
+
+            float y = 1f - 2f * frac((sequenceIndex + 0.5f) * goldenRatioConjugate);
+            float ring = sqrt(max(0f, 1f - y * y));
+            float theta = sequenceIndex * PI * (3f - sqrt(5f));
+            float shell = pow(frac((sequenceIndex + 0.5f) * secondIrrational), 1f / 3f);
+            return new float3(cos(theta) * ring, y, sin(theta) * ring) * shell * radius;
+        }
+
         void ResizeParticleBuffers(int newCount)
         {
             ResizeNativeArray(ref _particles, newCount);

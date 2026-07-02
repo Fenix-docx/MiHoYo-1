@@ -19,11 +19,14 @@ namespace Slime
 
         [Header("Particle Gain")]
         [SerializeField, Min(1)] int particlesToAdd = 128;
+        [Tooltip("World-space jitter around evenly sampled existing slime particles.")]
         [SerializeField, Min(0.01f)] float spawnRadius = 0.15f;
         [Tooltip("0 means unlimited.")]
         [SerializeField, Min(0)] int maxParticleCount = 4096;
         [SerializeField] bool triggerOnce = true;
         [SerializeField, Min(0f)] float repeatCooldown = 0.5f;
+        [SerializeField] bool destroyObjectOnFirstContact = true;
+        [SerializeField] GameObject objectToDestroy;
         [FormerlySerializedAs("onGameOver")]
         [SerializeField] UnityEvent onParticlesAdded;
 
@@ -67,8 +70,8 @@ namespace Slime
             if (slimeSurface == null && !ResolveSlimeSurface())
                 return;
 
-            if (TouchesCurrentSlimeSurface(out Vector3 contactPoint))
-                TryAddParticles(contactPoint);
+            if (TouchesCurrentSlimeSurface())
+                TryAddParticles();
         }
 
         void OnCollisionEnter(Collision collision)
@@ -171,7 +174,7 @@ namespace Slime
             return false;
         }
 
-        bool TryAddParticles(Vector3 contactPoint)
+        bool TryAddParticles()
         {
             if (!CanTrigger() || !ResolveSlimeSimulator())
                 return false;
@@ -183,14 +186,15 @@ namespace Slime
             if (requestedCount <= 0)
                 return false;
 
-            int added = slimeSimulator.AddParticles(requestedCount, contactPoint, spawnRadius);
+            int added = slimeSimulator.AddParticlesDistributed(requestedCount, spawnRadius);
             if (added <= 0)
                 return false;
 
             _hasTriggered = true;
             _lastTriggerTime = Time.time;
-            Debug.Log($"[SlimeGameOverOnContact] Added {added} slime particle(s) from '{name}'.", this);
+            Debug.Log($"[SlimeGameOverOnContact] Added {added} slime particle(s) across the fluid from '{name}'.", this);
             onParticlesAdded?.Invoke();
+            DestroyTargetObject();
             return true;
         }
 
@@ -237,30 +241,17 @@ namespace Slime
             if (!CanTrigger() || !IsSlimeObject(other))
                 return;
 
-            TryAddParticles(GetPhysicsContactPoint(other));
+            TryAddParticles();
         }
 
-        Vector3 GetPhysicsContactPoint(Collider other)
+        void DestroyTargetObject()
         {
-            Collider ownCollider = GetFirstUsableTargetCollider();
-            if (ownCollider != null && other != null)
-                return ownCollider.ClosestPoint(other.bounds.center);
+            if (!destroyObjectOnFirstContact)
+                return;
 
-            return other != null ? other.ClosestPoint(transform.position) : transform.position;
-        }
-
-        Collider GetFirstUsableTargetCollider()
-        {
-            if (_targetColliders == null || _targetColliders.Length == 0)
-                CacheTargetColliders();
-
-            for (int i = 0; i < _targetColliders.Length; i++)
-            {
-                if (IsUsable(_targetColliders[i]))
-                    return _targetColliders[i];
-            }
-
-            return null;
+            GameObject target = objectToDestroy != null ? objectToDestroy : gameObject;
+            if (target != null)
+                Destroy(target);
         }
 
         bool CanTrigger()
