@@ -500,6 +500,16 @@ namespace Slime
         #endregion  
         #region Scene references
 
+        static T[] FindSceneObjects<T>(FindObjectsInactive inactive)
+            where T : UnityEngine.Object
+        {
+#if UNITY_6000_4_OR_NEWER
+            return Object.FindObjectsByType<T>(inactive);
+#else
+            return Object.FindObjectsByType<T>(inactive, FindObjectsSortMode.None);
+#endif
+        }
+
         Rigidbody ResolveControllerBody()
         {
             SlimeControllerMotor childMotor = GetComponentInChildren<SlimeControllerMotor>();
@@ -514,7 +524,7 @@ namespace Slime
                 return childRigidbody;
 
             SlimeControllerMotor[] sceneMotors =
-                Object.FindObjectsByType<SlimeControllerMotor>(FindObjectsInactive.Exclude);
+                FindSceneObjects<SlimeControllerMotor>(FindObjectsInactive.Exclude);
             if (sceneMotors.Length == 1 && sceneMotors[0].TryGetComponent(out Rigidbody sceneBody))
             {
                 _controllerMotor = sceneMotors[0];
@@ -550,7 +560,7 @@ namespace Slime
                 return childMotor;
 
             SlimeControllerMotor[] sceneMotors =
-                Object.FindObjectsByType<SlimeControllerMotor>(FindObjectsInactive.Exclude);
+                FindSceneObjects<SlimeControllerMotor>(FindObjectsInactive.Exclude);
             return sceneMotors.Length == 1 ? sceneMotors[0] : null;
         }
 
@@ -884,7 +894,8 @@ namespace Slime
             DisposeColliderOctree();
             if (_colliderBuffer.IsCreated) _colliderBuffer.Dispose();
 
-            Collider[] colliders = Object.FindObjectsOfType<Collider>(false);
+            Collider[] colliders =
+                FindSceneObjects<Collider>(FindObjectsInactive.Exclude);
 
             int count = 0;
             for (int i = 0; i < colliders.Length; i++)
