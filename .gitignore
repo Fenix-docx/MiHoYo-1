@@ -90,3 +90,8 @@ crashlytics-build.properties
 /Assets/InputSystem_Actions.inputactions.meta
 /Assets/New Physics LowLevel Settings 2D.asset
 /Assets/New Physics LowLevel Settings 2D.asset.meta
+Assets/Slime/Input'Manager.meta
+Assets/Slime/Input'Manager/InputManager.cs
+Assets/Slime/Input'Manager/InputManager.cs.meta
+Assets/Slime/Input'Manager/PlayerInputState.cs
+Assets/Slime/Input'Manager/PlayerInputState.cs.meta
