@@ -91,6 +91,19 @@ namespace Slime
 
         }
 
+        public void ResetMotion()
+        {
+            _vy = 0f;
+            _grounded = true;
+            _jumpQueued = false;
+
+            if (_rb != null)
+            {
+                _rb.linearVelocity = Vector3.zero;
+                _rb.angularVelocity = Vector3.zero;
+            }
+        }
+
         public static Vector3 CalculatePlanarMoveVelocity(Transform movementSpace, Vector2 input, float speed)
         {
             return CalculatePlanarMoveVelocity(movementSpace != null ? movementSpace.rotation : Quaternion.identity, input, speed);

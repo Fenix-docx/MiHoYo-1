@@ -432,7 +432,52 @@ namespace Slime.Tests
             }
         }
 
-        // ── ApplyForceJob: velocity-follow only affects the controlled group ──
+        // Selection outline
+
+        [Test]
+        public void SurfaceBuilderBuildsOutlineForSelectedGroupOnly()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject surfaceObject = new GameObject("Slime Selection Outline Test");
+            surfaceObject.AddComponent<MeshFilter>();
+            surfaceObject.AddComponent<MeshRenderer>();
+
+            var particles = new NativeArray<SlimeParticle>(128, Allocator.TempJob);
+
+            try
+            {
+                SlimeSurfaceBuilder builder = surfaceObject.AddComponent<SlimeSurfaceBuilder>();
+                builder.enableSelectionOutline = true;
+                builder.selectionOutlineWidth = 0.05f;
+
+                for (int i = 0; i < particles.Length; i++)
+                {
+                    int groupId = i < particles.Length / 2 ? 0 : 1;
+                    int local = i % (particles.Length / 2);
+                    float t = (local + 0.5f) / (particles.Length / 2);
+                    float y = 1f - 2f * t;
+                    float ring = sqrt(max(0f, 1f - y * y));
+                    float theta = local * PI * (3f - sqrt(5f));
+                    float3 center = groupId == 0 ? new float3(-6f, 1f, 0f) : new float3(6f, 1f, 0f);
+                    float3 offset = new float3(cos(theta) * ring, y, sin(theta) * ring) * 0.25f;
+                    particles[i] = new SlimeParticle { Position = center + offset, ID = groupId };
+                }
+
+                builder.BuildSurface(particles, isoLevel: 0.01f, selectedGroupId: 1);
+                Assert.That(builder.HasSelectionOutline, Is.True);
+                Assert.That(builder.CurrentSelectionOutlineMesh.vertexCount, Is.GreaterThan(0));
+
+                builder.BuildSurface(particles, isoLevel: 0.01f, selectedGroupId: 7);
+                Assert.That(builder.HasSelectionOutline, Is.False);
+            }
+            finally
+            {
+                particles.Dispose();
+                Object.DestroyImmediate(surfaceObject);
+            }
+        }
+
+        // ApplyForceJob: velocity-follow only affects the controlled group
 
         [Test]
         public void VelocityFollowDoesNotDriveNonControlledGroup()
