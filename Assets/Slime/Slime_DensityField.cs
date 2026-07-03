@@ -100,10 +100,13 @@ namespace Slime
         [BurstCompile]
         public struct GridBlurJob : IJob
         {
+            public const int BlockScratchLength = 6 * 6 * 6;
+
             [ReadOnly] public NativeArray<int3> Keys;
             [ReadOnly] public NativeHashMap<int3, int> GridLut;
             public NativeArray<float> GridRead;
             public NativeArray<float> GridWrite;
+            public NativeArray<float> BlockScratch;
 
             public void Execute()
             {
@@ -113,8 +116,12 @@ namespace Slime
                     if (!GridLut.ContainsKey(key)) continue;
 
                     int off = GridLut[key];
-                    var block = new NativeArray<float>(216, Allocator.Temp); // 6x6x6
+                    if (!BlockScratch.IsCreated || BlockScratch.Length < BlockScratchLength)
+                        continue;
+                    NativeArray<float> block = BlockScratch;
                     int3 bc = key * 4 - 1;
+
+                    ClearBlock(block);
 
                     for (int dz = -1; dz <= 1; dz++)
                     for (int dy = -1; dy <= 1; dy++)
@@ -146,9 +153,15 @@ namespace Slime
                         }
                         GridWrite[off + j] = w > 1e-6f ? s / w : 0f;
                     }
-                    block.Dispose();
                 }
             }
+
+            static void ClearBlock(NativeArray<float> block)
+            {
+                for (int i = 0; i < BlockScratchLength; i++)
+                    block[i] = 0f;
+            }
+
             static int3 LC(int idx) => new int3(idx & 3, (idx >> 2) & 3, (idx >> 4) & 3);
             static int BI(int3 c) => c.x + 6 * (c.y + 6 * c.z);
         }

@@ -927,6 +927,63 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1353392218
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 5.99
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.967
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -11.228
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3685255736322274536, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4066601194196692562, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
+      propertyPath: m_Name
+      value: SM_PROP_trap_floor_dungeon_02
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 9b17d642fb8b20f4ca113bc19faf0369, type: 3}
 --- !u!1 &1589934249
 GameObject:
   m_ObjectHideFlags: 0
@@ -1801,6 +1858,10 @@ PrefabInstance:
       value: SlimeSimulator
       objectReference: {fileID: 0}
     - target: {fileID: 6518334405593590982, guid: ead021b4177b07c439c1c754d5b6f06e, type: 3}
+      propertyPath: concentration
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 6518334405593590982, guid: ead021b4177b07c439c1c754d5b6f06e, type: 3}
       propertyPath: controllerBody
       value: 
       objectReference: {fileID: 1979613698}
@@ -1828,3 +1889,4 @@ SceneRoots:
   - {fileID: 1147581789}
   - {fileID: 1606394552382808018}
   - {fileID: 8228877444561343172}
+  - {fileID: 1353392218}

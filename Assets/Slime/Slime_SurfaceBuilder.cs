@@ -13,6 +13,9 @@ namespace Slime
         public Material surfaceMaterial;
 
         NativeArray<float> _grid, _gridTemp;
+        NativeArray<float> _blurBlockScratch;
+        NativeArray<float> _mcBlockScratch;
+        NativeArray<int> _mcStats;
         NativeHashMap<int3, int> _gridLut;
         NativeArray<float3> _bounds;
         Mesh _mesh;
@@ -21,6 +24,8 @@ namespace Slime
 
         public Mesh CurrentSurfaceMesh => _mesh;
         public bool HasSurface => _mesh != null && _mesh.vertexCount > 0;
+        public int LastMarchingCubeBlockCount { get; private set; }
+        public int LastSkippedMarchingCubeBlockCount { get; private set; }
 
         void Awake()
         {
@@ -34,6 +39,9 @@ namespace Slime
             int len = SlimeConst.GridSize * SlimeConst.GridNum;
             _grid = new NativeArray<float>(len, Allocator.Persistent);
             _gridTemp = new NativeArray<float>(len, Allocator.Persistent);
+            _blurBlockScratch = new NativeArray<float>(SlimeDensityField.GridBlurJob.BlockScratchLength, Allocator.Persistent);
+            _mcBlockScratch = new NativeArray<float>(SlimeMC.MarchingCubesJob.BlockScratchLength, Allocator.Persistent);
+            _mcStats = new NativeArray<int>(SlimeMC.MarchingCubesJob.StatsLength, Allocator.Persistent);
             _gridLut = new NativeHashMap<int3, int>(SlimeConst.GridNum, Allocator.Persistent);
             _bounds = new NativeArray<float3>(2, Allocator.Persistent);
         }
@@ -56,7 +64,14 @@ namespace Slime
             }.Schedule().Complete();
 
             var keys = _gridLut.GetKeyArray(Allocator.TempJob);
-            if (keys.Length == 0) { keys.Dispose(); _mesh.Clear(); return; }
+            if (keys.Length == 0)
+            {
+                LastMarchingCubeBlockCount = 0;
+                LastSkippedMarchingCubeBlockCount = 0;
+                keys.Dispose();
+                _mesh.Clear();
+                return;
+            }
 
             // 4. Density projection
             new SlimeDensityField.DensityProjectionJob
@@ -67,7 +82,8 @@ namespace Slime
             // 5. Blur (single-threaded)
             new SlimeDensityField.GridBlurJob
             {
-                Keys = keys, GridLut = _gridLut, GridRead = _grid, GridWrite = _gridTemp
+                Keys = keys, GridLut = _gridLut, GridRead = _grid, GridWrite = _gridTemp,
+                BlockScratch = _blurBlockScratch,
             }.Schedule().Complete();
 
             var tmp = _grid; _grid = _gridTemp; _gridTemp = tmp;
@@ -82,11 +98,14 @@ namespace Slime
                 new SlimeMC.MarchingCubesJob
                 {
                     Keys = keys, GridLut = _gridLut, Grid = _grid,
+                    BlockScratch = _mcBlockScratch, Stats = _mcStats,
                     VertsOut = verts, NormsOut = norms, TrisOut = tris,
                     IsoLevel = isoLevel,
                     Origin = minPos,
                     CellScale = SlimeConst.Scale,
                 }.Schedule().Complete();
+                LastMarchingCubeBlockCount = _mcStats.Length > 0 ? _mcStats[0] : 0;
+                LastSkippedMarchingCubeBlockCount = _mcStats.Length > 1 ? _mcStats[1] : 0;
 
                 // 7. Write mesh
                 if (verts.Length > 0 && tris.Length > 0)
@@ -127,6 +146,9 @@ namespace Slime
         {
             if (_grid.IsCreated) _grid.Dispose();
             if (_gridTemp.IsCreated) _gridTemp.Dispose();
+            if (_blurBlockScratch.IsCreated) _blurBlockScratch.Dispose();
+            if (_mcBlockScratch.IsCreated) _mcBlockScratch.Dispose();
+            if (_mcStats.IsCreated) _mcStats.Dispose();
             if (_gridLut.IsCreated) _gridLut.Dispose();
             if (_bounds.IsCreated) _bounds.Dispose();
             if (_mesh) Destroy(_mesh);

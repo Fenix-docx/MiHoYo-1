@@ -319,9 +319,14 @@ namespace Slime
         [BurstCompile]
         public struct MarchingCubesJob : IJob
         {
+            public const int BlockScratchLength = 8 * 8 * 8;
+            public const int StatsLength = 2;
+
             [ReadOnly] public NativeArray<int3> Keys;
             [ReadOnly] public NativeHashMap<int3, int> GridLut;
             [ReadOnly] public NativeArray<float> Grid;
+            public NativeArray<float> BlockScratch;
+            public NativeArray<int> Stats;
             public NativeList<float3> VertsOut;
             public NativeList<float3> NormsOut;
             public NativeList<int> TrisOut;
@@ -335,12 +340,25 @@ namespace Slime
                 NormsOut.Clear();
                 TrisOut.Clear();
 
+                int visitedBlocks = 0;
+                int skippedBlocks = 0;
+                if (Stats.IsCreated)
+                {
+                    if (Stats.Length > 0) Stats[0] = 0;
+                    if (Stats.Length > 1) Stats[1] = 0;
+                }
+
                 for (int ki = 0; ki < Keys.Length; ki++)
                 {
+                    visitedBlocks++;
                     int3 key = Keys[ki];
+                    if (!BlockScratch.IsCreated || BlockScratch.Length < BlockScratchLength)
+                        continue;
+                    NativeArray<float> block = BlockScratch;
 
-                    var block = new NativeArray<float>(8 * 8 * 8, Allocator.Temp);
+                    ClearBlock(block);
                     int3 minCoord = (key << 2) - 2;
+                    float maxDensity = 0f;
                     for (int dz = -1; dz <= 1; dz++)
                     for (int dy = -1; dy <= 1; dy++)
                     for (int dx = -1; dx <= 1; dx++)
@@ -352,8 +370,16 @@ namespace Slime
                         {
                             int3 c = (nKey << 2) + LocalCoord(j) - minCoord;
                             if (any(c < 0) || any(c >= 8)) continue;
-                            block[BlkIdx(c)] = Grid[nOff + j];
+                            float density = Grid[nOff + j];
+                            block[BlkIdx(c)] = density;
+                            maxDensity = max(maxDensity, density);
                         }
+                    }
+
+                    if (maxDensity <= IsoLevel)
+                    {
+                        skippedBlocks++;
+                        continue;
                     }
 
                     for (int z = 1; z < 6; z++)
@@ -415,8 +441,19 @@ namespace Slime
                             TrisOut.Add(vi0 + 2);
                         }
                     }
-                    block.Dispose();
                 }
+
+                if (Stats.IsCreated)
+                {
+                    if (Stats.Length > 0) Stats[0] = visitedBlocks;
+                    if (Stats.Length > 1) Stats[1] = skippedBlocks;
+                }
+            }
+
+            static void ClearBlock(NativeArray<float> block)
+            {
+                for (int i = 0; i < BlockScratchLength; i++)
+                    block[i] = 0f;
             }
 
             static float3 EdgePos(NativeArray<float> blk, int3 c, int edge, float thr)
