@@ -6,10 +6,13 @@ namespace Slime
     public sealed class SlimeDoorVisibilityContactEvent : SlimeContactEventHandler
     {
         [SerializeField] GameObject objectToHide;
+        [SerializeField] SlimeContactEventTriggerMode triggerMode = SlimeContactEventTriggerMode.RepeatableStart;
         [SerializeField] bool restoreObjectWhenContactEnds = true;
 
         bool _initialObjectActiveSelf = true;
         bool _hasCapturedInitialState;
+        bool _hasTriggered;
+        bool _isContactApplied;
 
         public GameObject ObjectToHide => objectToHide;
 
@@ -20,14 +23,23 @@ namespace Slime
 
         public override void HandleContactBegan(SlimeContactEventContext context)
         {
+            if (!CanStartContactEvent(triggerMode, _hasTriggered))
+                return;
+
             CaptureInitialObjectState();
 
             if (objectToHide != null && objectToHide.activeSelf)
                 objectToHide.SetActive(false);
+
+            _hasTriggered = true;
+            _isContactApplied = true;
         }
 
         public override void HandleContactEnded(SlimeContactEventContext context)
         {
+            if (!_isContactApplied)
+                return;
+
             CaptureInitialObjectState();
 
             if (objectToHide != null
@@ -36,11 +48,15 @@ namespace Slime
             {
                 objectToHide.SetActive(_initialObjectActiveSelf);
             }
+
+            _isContactApplied = false;
         }
 
         public void ResetCapturedState()
         {
             _hasCapturedInitialState = false;
+            _hasTriggered = false;
+            _isContactApplied = false;
             CaptureInitialObjectState();
         }
 

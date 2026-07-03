@@ -8,7 +8,9 @@ namespace Slime
         [SerializeField] GameObject doorModel;
         [SerializeField] Collider[] doorColliders;
         [SerializeField] bool includeChildColliders = true;
-        [SerializeField] bool triggerOnce = true;
+        [SerializeField] SlimeContactEventTriggerMode triggerMode = SlimeContactEventTriggerMode.Once;
+        [SerializeField, HideInInspector] bool triggerOnce = true;
+        [SerializeField, HideInInspector] bool triggerModeMigrated;
 
         bool _hasOpened;
 
@@ -16,17 +18,19 @@ namespace Slime
 
         void Awake()
         {
+            MigrateLegacyTriggerMode();
             CacheDoorColliders();
         }
 
         public override void HandleContactBegan(SlimeContactEventContext context)
         {
+            MigrateLegacyTriggerMode();
             OpenDoor();
         }
 
         public void OpenDoor()
         {
-            if (triggerOnce && _hasOpened)
+            if (!CanStartContactEvent(triggerMode, _hasOpened))
                 return;
 
             CacheDoorColliders();
@@ -77,6 +81,17 @@ namespace Slime
             doorColliders = includeChildColliders
                 ? colliderRoot.GetComponentsInChildren<Collider>(true)
                 : colliderRoot.GetComponents<Collider>();
+        }
+
+        void MigrateLegacyTriggerMode()
+        {
+            if (triggerModeMigrated)
+                return;
+
+            triggerMode = triggerOnce
+                ? SlimeContactEventTriggerMode.Once
+                : SlimeContactEventTriggerMode.RepeatableStart;
+            triggerModeMigrated = true;
         }
     }
 }

@@ -2,6 +2,18 @@ using UnityEngine;
 
 namespace Slime
 {
+    public enum SlimeContactEventTriggerMode
+    {
+        [InspectorName("仅一次")]
+        Once,
+
+        [InspectorName("可重复启动")]
+        RepeatableStart,
+
+        [InspectorName("循环")]
+        Loop,
+    }
+
     public readonly struct SlimeContactEventContext
     {
         public SlimeContactEventContext(
@@ -30,5 +42,15 @@ namespace Slime
     {
         public virtual void HandleContactBegan(SlimeContactEventContext context) { }
         public virtual void HandleContactEnded(SlimeContactEventContext context) { }
+
+        protected static bool CanStartContactEvent(SlimeContactEventTriggerMode triggerMode, bool hasTriggered)
+        {
+            return triggerMode != SlimeContactEventTriggerMode.Once || !hasTriggered;
+        }
+
+        protected static bool ShouldLoopContactEvent(SlimeContactEventTriggerMode triggerMode)
+        {
+            return triggerMode == SlimeContactEventTriggerMode.Loop;
+        }
     }
 }

@@ -381,10 +381,13 @@ namespace Slime
         public struct UpdateJob : IJobParallelFor
         {
             [ReadOnly] public NativeArray<SlimeBoxCollider> Colliders;
+            [ReadOnly] public NativeArray<SlimeColliderOctreeNode> ColliderOctreeNodes;
+            [ReadOnly] public NativeArray<int> ColliderOctreeIndices;
             [ReadOnly] public NativeArray<float3> PosOld;
             [WriteOnly] public NativeArray<float3> Velocity;
             public NativeArray<SlimeParticle> Ps;
             public bool EnableFloor;
+            public bool UseColliderOctree;
             public float FloorY;
 
             public void Execute(int i)
@@ -405,55 +408,13 @@ namespace Slime
                 // inside another collider or skip a thin wall.
                 for (int pass = 0; pass < 2; pass++)
                 {
-                    for (int c = 0; c < Colliders.Length; c++)
-                    {
-                        SlimeBoxCollider box = Colliders[c];
-                        float3 axisX = SafeAxis(box.AxisX, new float3(1f, 0f, 0f));
-                        float3 axisY = SafeAxis(box.AxisY, new float3(0f, 1f, 0f));
-                        float3 axisZ = SafeAxis(box.AxisZ, new float3(0f, 0f, 1f));
-                        float3 extent = max(box.Extent, new float3(0.0001f));
-
-                        // Discrete check: particle is currently inside the OBB.
-                        float3 local = WorldToObbLocal(p.Position, box.Center, axisX, axisY, axisZ);
-                        bool inside = all(abs(local) < extent);
-
-                        if (inside)
-                        {
-                            float3 remain = extent - abs(local);
-                            int axis = 0;
-                            if (remain.y < remain[axis]) axis = 1;
-                            if (remain.z < remain[axis]) axis = 2;
-
-                            local[axis] = FaceSign(local[axis]) * extent[axis];
-                            p.Position = ObbLocalToWorld(local, box.Center, axisX, axisY, axisZ);
-                            continue;
-                        }
-
-                        // CCD: segment-box intersection in OBB-local space.
-                        float3 localOld = WorldToObbLocal(oldPos, box.Center, axisX, axisY, axisZ);
-                        float3 localNow = local;
-                        float3 disp = localNow - localOld;
-                        float dist = length(disp);
-                        if (dist < 1e-6f)
-                            continue;
-
-                        float3 dir = disp / dist;
-                        float3 invDir = select(1f / dir, 1e10f, abs(dir) < 1e-10f);
-
-                        float3 t0 = (-extent - localOld) * invDir;
-                        float3 t1 = (extent - localOld) * invDir;
-                        float3 tNear = min(t0, t1);
-                        float3 tFar = max(t0, t1);
-                        float tEntry = max(max(tNear.x, tNear.y), tNear.z);
-                        float tExit = min(min(tFar.x, tFar.y), tFar.z);
-
-                        if (tEntry <= tExit && tEntry >= 0f && tEntry < dist)
-                        {
-                            // Hit: push particle just before entry point.
-                            float3 localHit = localOld + dir * max(0f, tEntry - 1e-3f);
-                            p.Position = ObbLocalToWorld(localHit, box.Center, axisX, axisY, axisZ);
-                        }
-                    }
+                    if (UseColliderOctree
+                        && ColliderOctreeNodes.IsCreated
+                        && ColliderOctreeNodes.Length > 0
+                        && ColliderOctreeIndices.IsCreated)
+                        ResolveCollisionsOctree(ref p, oldPos);
+                    else
+                        ResolveCollisionsFull(ref p, oldPos);
                 }
 
                 float3 vel = (p.Position - PosOld[i]) / SlimeConst.DeltaTime;
@@ -464,6 +425,125 @@ namespace Slime
                 Ps[i] = p;
             }
 
+            void ResolveCollisionsFull(ref SlimeParticle particle, float3 oldPos)
+            {
+                if (!Colliders.IsCreated)
+                    return;
+
+                for (int c = 0; c < Colliders.Length; c++)
+                    ResolveColliderIndex(ref particle, oldPos, c);
+            }
+
+            void ResolveCollisionsOctree(ref SlimeParticle particle, float3 oldPos)
+            {
+                float3 queryMin = min(oldPos, particle.Position) - new float3(0.01f);
+                float3 queryMax = max(oldPos, particle.Position) + new float3(0.01f);
+
+                FixedList4096Bytes<int> stack = default;
+                stack.Add(0);
+
+                while (stack.Length > 0)
+                {
+                    int nodeIndex = stack[stack.Length - 1];
+                    stack.RemoveAt(stack.Length - 1);
+
+                    if ((uint)nodeIndex >= (uint)ColliderOctreeNodes.Length)
+                        continue;
+
+                    SlimeColliderOctreeNode node = ColliderOctreeNodes[nodeIndex];
+                    if (!IntersectsNode(queryMin, queryMax, node))
+                        continue;
+
+                    for (int i = 0; i < node.ColliderCount; i++)
+                    {
+                        int indexOffset = node.FirstCollider + i;
+                        if ((uint)indexOffset >= (uint)ColliderOctreeIndices.Length)
+                            continue;
+
+                        ResolveColliderIndex(ref particle, oldPos, ColliderOctreeIndices[indexOffset]);
+                    }
+
+                    if (node.FirstChild < 0)
+                        continue;
+
+                    for (int childOffset = 0; childOffset < 8; childOffset++)
+                    {
+                        int childIndex = node.FirstChild + childOffset;
+                        if ((uint)childIndex >= (uint)ColliderOctreeNodes.Length)
+                            continue;
+
+                        if (!IntersectsNode(queryMin, queryMax, ColliderOctreeNodes[childIndex]))
+                            continue;
+
+                        if (stack.Length >= stack.Capacity)
+                        {
+                            ResolveCollisionsFull(ref particle, oldPos);
+                            return;
+                        }
+
+                        stack.Add(childIndex);
+                    }
+                }
+            }
+
+            void ResolveColliderIndex(ref SlimeParticle particle, float3 oldPos, int colliderIndex)
+            {
+                if (!Colliders.IsCreated || (uint)colliderIndex >= (uint)Colliders.Length)
+                    return;
+
+                SlimeBoxCollider box = Colliders[colliderIndex];
+                ResolveAgainstCollider(ref particle, oldPos, box);
+            }
+
+            static void ResolveAgainstCollider(ref SlimeParticle particle, float3 oldPos, SlimeBoxCollider box)
+            {
+                float3 axisX = SafeAxis(box.AxisX, new float3(1f, 0f, 0f));
+                float3 axisY = SafeAxis(box.AxisY, new float3(0f, 1f, 0f));
+                float3 axisZ = SafeAxis(box.AxisZ, new float3(0f, 0f, 1f));
+                float3 extent = max(box.Extent, new float3(0.0001f));
+
+                // Discrete check: particle is currently inside the OBB.
+                float3 local = WorldToObbLocal(particle.Position, box.Center, axisX, axisY, axisZ);
+                bool inside = all(abs(local) < extent);
+
+                if (inside)
+                {
+                    float3 remain = extent - abs(local);
+                    int axis = 0;
+                    if (remain.y < remain[axis]) axis = 1;
+                    if (remain.z < remain[axis]) axis = 2;
+
+                    local[axis] = FaceSign(local[axis]) * extent[axis];
+                    particle.Position = ObbLocalToWorld(local, box.Center, axisX, axisY, axisZ);
+                    return;
+                }
+
+                // CCD: segment-box intersection in OBB-local space.
+                float3 localOld = WorldToObbLocal(oldPos, box.Center, axisX, axisY, axisZ);
+                float3 localNow = local;
+                float3 disp = localNow - localOld;
+                float dist = length(disp);
+                if (dist < 1e-6f)
+                    return;
+
+                float3 dir = disp / dist;
+                float3 invDir = select(1f / dir, 1e10f, abs(dir) < 1e-10f);
+
+                float3 t0 = (-extent - localOld) * invDir;
+                float3 t1 = (extent - localOld) * invDir;
+                float3 tNear = min(t0, t1);
+                float3 tFar = max(t0, t1);
+                float tEntry = max(max(tNear.x, tNear.y), tNear.z);
+                float tExit = min(min(tFar.x, tFar.y), tFar.z);
+
+                if (tEntry <= tExit && tEntry >= 0f && tEntry < dist)
+                {
+                    // Hit: push particle just before entry point.
+                    float3 localHit = localOld + dir * max(0f, tEntry - 1e-3f);
+                    particle.Position = ObbLocalToWorld(localHit, box.Center, axisX, axisY, axisZ);
+                }
+            }
+
             static bool IsFinite(float value)
             {
                 return !isnan(value) && isfinite(value);
@@ -472,6 +552,14 @@ namespace Slime
             static bool IsFinite(float3 value)
             {
                 return IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
+            }
+
+            static bool IntersectsNode(float3 queryMin, float3 queryMax, SlimeColliderOctreeNode node)
+            {
+                float3 nodeHalf = new float3(max(0f, node.HalfSize));
+                float3 nodeMin = node.Center - nodeHalf;
+                float3 nodeMax = node.Center + nodeHalf;
+                return all(queryMax >= nodeMin) && all(queryMin <= nodeMax);
             }
         }
 

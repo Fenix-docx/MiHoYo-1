@@ -85,8 +85,6 @@ namespace Slime
 
             _rb.MovePosition(pos);
             _rb.MoveRotation(rotation);
-            // Expose the commanded velocity for the simulator to read back.
-            _rb.linearVelocity = CommandedVelocity;
 
         }
 
@@ -102,8 +100,11 @@ namespace Slime
 
             if (_rb != null)
             {
-                _rb.linearVelocity = Vector3.zero;
-                _rb.angularVelocity = Vector3.zero;
+                if (!_rb.isKinematic)
+                {
+                    _rb.linearVelocity = Vector3.zero;
+                    _rb.angularVelocity = Vector3.zero;
+                }
             }
         }
 

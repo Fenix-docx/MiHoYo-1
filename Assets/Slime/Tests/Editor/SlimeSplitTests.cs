@@ -433,9 +433,7 @@ namespace Slime.Tests
             }
         }
 
-<<<<<<< Updated upstream
-        // ── ApplyForceJob: velocity-follow only affects the controlled group ──
-=======
+        // Control switch cohesion state
         [Test]
         public void SwitchControlPreservesEachGroupCohesionState()
         {
@@ -521,53 +519,7 @@ namespace Slime.Tests
             }
         }
 
-        // Selection outline
-
-        [Test]
-        public void SurfaceBuilderBuildsOutlineForSelectedGroupOnly()
-        {
-            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            GameObject surfaceObject = new GameObject("Slime Selection Outline Test");
-            surfaceObject.AddComponent<MeshFilter>();
-            surfaceObject.AddComponent<MeshRenderer>();
-
-            var particles = new NativeArray<SlimeParticle>(128, Allocator.TempJob);
-
-            try
-            {
-                SlimeSurfaceBuilder builder = surfaceObject.AddComponent<SlimeSurfaceBuilder>();
-                builder.enableSelectionOutline = true;
-                builder.selectionOutlineWidth = 0.05f;
-
-                for (int i = 0; i < particles.Length; i++)
-                {
-                    int groupId = i < particles.Length / 2 ? 0 : 1;
-                    int local = i % (particles.Length / 2);
-                    float t = (local + 0.5f) / (particles.Length / 2);
-                    float y = 1f - 2f * t;
-                    float ring = sqrt(max(0f, 1f - y * y));
-                    float theta = local * PI * (3f - sqrt(5f));
-                    float3 center = groupId == 0 ? new float3(-6f, 1f, 0f) : new float3(6f, 1f, 0f);
-                    float3 offset = new float3(cos(theta) * ring, y, sin(theta) * ring) * 0.25f;
-                    particles[i] = new SlimeParticle { Position = center + offset, ID = groupId };
-                }
-
-                builder.BuildSurface(particles, isoLevel: 0.01f, selectedGroupId: 1);
-                Assert.That(builder.HasSelectionOutline, Is.True);
-                Assert.That(builder.CurrentSelectionOutlineMesh.vertexCount, Is.GreaterThan(0));
-
-                builder.BuildSurface(particles, isoLevel: 0.01f, selectedGroupId: 7);
-                Assert.That(builder.HasSelectionOutline, Is.False);
-            }
-            finally
-            {
-                particles.Dispose();
-                Object.DestroyImmediate(surfaceObject);
-            }
-        }
-
         // ApplyForceJob: velocity-follow only affects the controlled group
->>>>>>> Stashed changes
 
         [Test]
         public void VelocityFollowDoesNotDriveNonControlledGroup()
@@ -910,7 +862,6 @@ namespace Slime.Tests
                 simulator.Initialise();
 
                 SetPrivateField(motor, "<CommandedVelocity>k__BackingField", Vector3.right * 2f);
-                controllerBody.linearVelocity = Vector3.zero;
                 Assert.That(motor.CommandedVelocity.x, Is.EqualTo(2f).Within(0.0001f));
 
                 InvokePrivate(simulator, "Control");
@@ -1016,6 +967,87 @@ namespace Slime.Tests
             }
         }
 
+        [Test]
+        public void UpdateJobOctreeBroadPhaseMatchesFullColliderScan()
+        {
+            var fullParticles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
+            var octreeParticles = new NativeArray<SlimeParticle>(1, Allocator.TempJob);
+            var oldPositions = new NativeArray<float3>(1, Allocator.TempJob);
+            var fullVelocity = new NativeArray<float3>(1, Allocator.TempJob);
+            var octreeVelocity = new NativeArray<float3>(1, Allocator.TempJob);
+            var colliders = new NativeArray<SlimeBoxCollider>(2, Allocator.TempJob);
+            var octreeNodes = new NativeArray<SlimeColliderOctreeNode>(1, Allocator.TempJob);
+            var octreeIndices = new NativeArray<int>(1, Allocator.TempJob);
+
+            try
+            {
+                oldPositions[0] = new float3(-2f, 1f, 0f);
+                fullParticles[0] = new SlimeParticle { Position = new float3(2f, 1f, 0f), ID = 0 };
+                octreeParticles[0] = fullParticles[0];
+
+                colliders[0] = MakeCollider(
+                    new float3(0f, 1f, 0f),
+                    new float3(1f, 1f, 1f),
+                    new float3(1f, 0f, 0f),
+                    new float3(0f, 1f, 0f),
+                    new float3(0f, 0f, 1f));
+                colliders[1] = MakeCollider(
+                    new float3(100f, 100f, 100f),
+                    new float3(5f, 5f, 5f),
+                    new float3(1f, 0f, 0f),
+                    new float3(0f, 1f, 0f),
+                    new float3(0f, 0f, 1f));
+
+                octreeNodes[0] = new SlimeColliderOctreeNode
+                {
+                    Center = new float3(0f, 1f, 0f),
+                    HalfSize = 4f,
+                    FirstChild = -1,
+                    FirstCollider = 0,
+                    ColliderCount = 1,
+                };
+                octreeIndices[0] = 0;
+
+                new SlimeSimulation.UpdateJob
+                {
+                    Ps = fullParticles,
+                    PosOld = oldPositions,
+                    Colliders = colliders,
+                    Velocity = fullVelocity,
+                    EnableFloor = false,
+                    UseColliderOctree = false,
+                    FloorY = 1f,
+                }.Schedule(1, 1).Complete();
+
+                new SlimeSimulation.UpdateJob
+                {
+                    Ps = octreeParticles,
+                    PosOld = oldPositions,
+                    Colliders = colliders,
+                    ColliderOctreeNodes = octreeNodes,
+                    ColliderOctreeIndices = octreeIndices,
+                    Velocity = octreeVelocity,
+                    EnableFloor = false,
+                    UseColliderOctree = true,
+                    FloorY = 1f,
+                }.Schedule(1, 1).Complete();
+
+                Assert.That(distance(octreeParticles[0].Position, fullParticles[0].Position), Is.LessThan(0.0001f));
+                Assert.That(distance(octreeVelocity[0], fullVelocity[0]), Is.LessThan(0.0001f));
+            }
+            finally
+            {
+                fullParticles.Dispose();
+                octreeParticles.Dispose();
+                oldPositions.Dispose();
+                fullVelocity.Dispose();
+                octreeVelocity.Dispose();
+                colliders.Dispose();
+                octreeNodes.Dispose();
+                octreeIndices.Dispose();
+            }
+        }
+
         static T GetPrivateField<T>(object target, string name)
         {
             FieldInfo field = target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
@@ -1077,6 +1109,18 @@ namespace Slime.Tests
                     return true;
 
             return false;
+        }
+
+        static SlimeBoxCollider MakeCollider(float3 center, float3 extent, float3 axisX, float3 axisY, float3 axisZ)
+        {
+            return new SlimeBoxCollider
+            {
+                Center = center,
+                Extent = extent,
+                AxisX = axisX,
+                AxisY = axisY,
+                AxisZ = axisZ,
+            };
         }
     }
 }

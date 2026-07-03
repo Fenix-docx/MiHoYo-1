@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace Slime
@@ -15,12 +16,17 @@ namespace Slime
         [SerializeField] RotationSpace rotationSpace = RotationSpace.Local;
         [SerializeField] Vector3 rotationAxis = Vector3.up;
         [SerializeField] float rotationAngle = 90f;
-        [SerializeField] bool triggerOnce = true;
+        [SerializeField] SlimeContactEventTriggerMode triggerMode = SlimeContactEventTriggerMode.Once;
+        [SerializeField, Min(0.01f)] float loopInterval = 0.25f;
         [SerializeField] bool restoreWhenContactEnds = false;
+        [SerializeField, HideInInspector] bool triggerOnce = true;
+        [SerializeField, HideInInspector] bool triggerModeMigrated;
 
         Quaternion _initialLocalRotation;
         Quaternion _initialWorldRotation;
+        Coroutine _loopRoutine;
         bool _hasCapturedInitialRotation;
+        bool _hasTriggered;
         bool _hasRotated;
 
         public Transform Target => target;
@@ -30,25 +36,41 @@ namespace Slime
 
         void Awake()
         {
+            MigrateLegacyTriggerMode();
             CaptureInitialRotation();
         }
 
         void OnValidate()
         {
+            MigrateLegacyTriggerMode();
+            loopInterval = Mathf.Max(0.01f, loopInterval);
+
             if (rotationAxis.sqrMagnitude <= 0.0001f)
                 rotationAxis = Vector3.up;
         }
 
+        void OnDisable()
+        {
+            StopLoopingRotation();
+        }
+
         public override void HandleContactBegan(SlimeContactEventContext context)
         {
-            if (triggerOnce && _hasRotated)
+            MigrateLegacyTriggerMode();
+
+            if (!CanStartContactEvent(triggerMode, _hasTriggered))
                 return;
 
-            RotateTarget();
+            if (ShouldLoopContactEvent(triggerMode))
+                StartLoopingRotation();
+            else
+                RotateTarget();
         }
 
         public override void HandleContactEnded(SlimeContactEventContext context)
         {
+            StopLoopingRotation();
+
             if (!restoreWhenContactEnds)
                 return;
 
@@ -73,6 +95,7 @@ namespace Slime
                 rotateTarget.rotation = delta * rotateTarget.rotation;
 
             _hasRotated = true;
+            _hasTriggered = true;
         }
 
         public void RestoreInitialRotation()
@@ -89,6 +112,8 @@ namespace Slime
 
         public void ResetRotationState()
         {
+            StopLoopingRotation();
+            _hasTriggered = false;
             _hasRotated = false;
             _hasCapturedInitialRotation = false;
             CaptureInitialRotation();
@@ -108,6 +133,44 @@ namespace Slime
         Transform ResolveTarget()
         {
             return target != null ? target : transform;
+        }
+
+        void StartLoopingRotation()
+        {
+            if (_loopRoutine != null)
+                StopCoroutine(_loopRoutine);
+
+            _loopRoutine = StartCoroutine(RotationLoop());
+        }
+
+        void StopLoopingRotation()
+        {
+            if (_loopRoutine == null)
+                return;
+
+            StopCoroutine(_loopRoutine);
+            _loopRoutine = null;
+        }
+
+        IEnumerator RotationLoop()
+        {
+            do
+            {
+                RotateTarget();
+                yield return new WaitForSeconds(loopInterval);
+            }
+            while (true);
+        }
+
+        void MigrateLegacyTriggerMode()
+        {
+            if (triggerModeMigrated)
+                return;
+
+            triggerMode = triggerOnce
+                ? SlimeContactEventTriggerMode.Once
+                : SlimeContactEventTriggerMode.RepeatableStart;
+            triggerModeMigrated = true;
         }
     }
 }
