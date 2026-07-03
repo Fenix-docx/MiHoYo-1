@@ -142,10 +142,9 @@ namespace Slime.Tests
             try
             {
                 var groups = new SlimeGroupManager();
-                groups.Init(concentration: 10f, stiffness: 0.15f);
+                groups.Init(concentration: 10f, stiffness: 0.15f, cohesionStep: 1);
                 // Simulate the player lowering cohesion (diffuse) before splitting.
-                groups.SetControlledConcentration(0.1f);
-                groups.SetControlledStiffness(0f);
+                groups.SetControlledCohesionState(0.1f, 0f, 3);
 
                 int split = groups.Split(particles, vel, new float3(1f, 0f, 0f),
                     splitFraction: 0.5f, separation: 0f, minParticlesToSplit: 16);
@@ -153,8 +152,10 @@ namespace Slime.Tests
                 Assert.That(groups.GetConcentration(split), Is.EqualTo(10f),
                     "split body uses initial concentration, not the parent's diffuse value");
                 Assert.That(groups.GetStiffness(split), Is.EqualTo(0.15f));
+                Assert.That(groups.GetCohesionStep(split), Is.EqualTo(1));
                 Assert.That(groups.GetConcentration(0), Is.EqualTo(0.1f),
                     "main body keeps its (player-adjusted) state");
+                Assert.That(groups.GetCohesionStep(0), Is.EqualTo(3));
             }
             finally
             {
@@ -432,7 +433,141 @@ namespace Slime.Tests
             }
         }
 
+<<<<<<< Updated upstream
         // ── ApplyForceJob: velocity-follow only affects the controlled group ──
+=======
+        [Test]
+        public void SwitchControlPreservesEachGroupCohesionState()
+        {
+            const int n = 128;
+            var particles = new NativeArray<SlimeParticle>(n, Allocator.TempJob);
+            var vel = new NativeArray<float3>(n, Allocator.TempJob);
+            for (int i = 0; i < n; i++)
+                particles[i] = new SlimeParticle { Position = new float3(i, 0f, 0f), ID = 0 };
+
+            try
+            {
+                var groups = new SlimeGroupManager();
+                groups.Init(10f, 0.15f, cohesionStep: 1);
+                groups.SetControlledCohesionState(0.1f, 0f, 3);
+
+                int split = groups.Split(particles, vel, new float3(1f, 0f, 0f),
+                    splitFraction: 0.25f, separation: 0f, minParticlesToSplit: 16);
+                Assert.That(split, Is.GreaterThanOrEqualTo(0));
+
+                int switched = groups.SwitchControl();
+                Assert.That(switched, Is.EqualTo(split));
+                Assert.That(groups.GetConcentration(switched), Is.EqualTo(10f));
+                Assert.That(groups.GetStiffness(switched), Is.EqualTo(0.15f));
+                Assert.That(groups.GetCohesionStep(switched), Is.EqualTo(1));
+
+                groups.SetControlledCohesionState(6f, 0.05f, 2);
+                Assert.That(groups.GetConcentration(switched), Is.EqualTo(6f));
+                Assert.That(groups.GetCohesionStep(switched), Is.EqualTo(2));
+
+                int switchedBack = groups.SwitchControl();
+                Assert.That(switchedBack, Is.EqualTo(0));
+                Assert.That(groups.GetConcentration(switchedBack), Is.EqualTo(0.1f));
+                Assert.That(groups.GetStiffness(switchedBack), Is.EqualTo(0f));
+                Assert.That(groups.GetCohesionStep(switchedBack), Is.EqualTo(3));
+            }
+            finally
+            {
+                particles.Dispose();
+                vel.Dispose();
+            }
+        }
+
+        [Test]
+        public void SimulatorSwitchControlSyncsCohesionStateForHud()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Cohesion HUD Switch Regression");
+
+            try
+            {
+                SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+                simulator.simulateOnStart = false;
+                simulator.enableSurface = false;
+                simulator.enableMeshShapeTarget = false;
+                simulator.gravity = 0f;
+                simulator.splitFraction = 0.5f;
+                simulator.splitSeparation = 0f;
+                simulator.minParticlesToSplit = 16;
+                simulator.concentration = 10f;
+                simulator.shapeStiffness = 0.15f;
+                simulator.currentstep = 1;
+
+                simulator.Initialise();
+
+                simulator.concentration = 0.1f;
+                simulator.shapeStiffness = 0f;
+                simulator.currentstep = 3;
+
+                Assert.That(simulator.Split(Vector3.right), Is.True);
+
+                int switched = simulator.SwitchControl();
+                Assert.That(switched, Is.GreaterThan(0));
+                Assert.That(simulator.ControlledGroupId, Is.EqualTo(switched));
+                Assert.That(simulator.CohesionStep, Is.EqualTo(1));
+                Assert.That(simulator.concentration, Is.EqualTo(10f));
+                Assert.That(simulator.shapeStiffness, Is.EqualTo(0.15f));
+                Assert.That(simulator.ControlledParticleCount, Is.GreaterThan(0));
+                Assert.That(simulator.ControlledParticleCount, Is.LessThan(simulator.ParticleCount));
+            }
+            finally
+            {
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
+        // Selection outline
+
+        [Test]
+        public void SurfaceBuilderBuildsOutlineForSelectedGroupOnly()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject surfaceObject = new GameObject("Slime Selection Outline Test");
+            surfaceObject.AddComponent<MeshFilter>();
+            surfaceObject.AddComponent<MeshRenderer>();
+
+            var particles = new NativeArray<SlimeParticle>(128, Allocator.TempJob);
+
+            try
+            {
+                SlimeSurfaceBuilder builder = surfaceObject.AddComponent<SlimeSurfaceBuilder>();
+                builder.enableSelectionOutline = true;
+                builder.selectionOutlineWidth = 0.05f;
+
+                for (int i = 0; i < particles.Length; i++)
+                {
+                    int groupId = i < particles.Length / 2 ? 0 : 1;
+                    int local = i % (particles.Length / 2);
+                    float t = (local + 0.5f) / (particles.Length / 2);
+                    float y = 1f - 2f * t;
+                    float ring = sqrt(max(0f, 1f - y * y));
+                    float theta = local * PI * (3f - sqrt(5f));
+                    float3 center = groupId == 0 ? new float3(-6f, 1f, 0f) : new float3(6f, 1f, 0f);
+                    float3 offset = new float3(cos(theta) * ring, y, sin(theta) * ring) * 0.25f;
+                    particles[i] = new SlimeParticle { Position = center + offset, ID = groupId };
+                }
+
+                builder.BuildSurface(particles, isoLevel: 0.01f, selectedGroupId: 1);
+                Assert.That(builder.HasSelectionOutline, Is.True);
+                Assert.That(builder.CurrentSelectionOutlineMesh.vertexCount, Is.GreaterThan(0));
+
+                builder.BuildSurface(particles, isoLevel: 0.01f, selectedGroupId: 7);
+                Assert.That(builder.HasSelectionOutline, Is.False);
+            }
+            finally
+            {
+                particles.Dispose();
+                Object.DestroyImmediate(surfaceObject);
+            }
+        }
+
+        // ApplyForceJob: velocity-follow only affects the controlled group
+>>>>>>> Stashed changes
 
         [Test]
         public void VelocityFollowDoesNotDriveNonControlledGroup()
