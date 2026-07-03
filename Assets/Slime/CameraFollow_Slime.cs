@@ -13,6 +13,12 @@ namespace Slime
         public float rotationSpeed = 5f;
         public Vector3 cameraOffset = new Vector3(0, 2, -5);
 
+        [Header("Camera Zoom")]
+        public bool enableZoom = true;
+        [Min(0f)] public float zoomSpeed = 5f;
+        [Min(0.01f)] public float minZoomDistance = 2f;
+        [Min(0.01f)] public float maxZoomDistance = 10f;
+
         [Header("Camera Damping")]
         [Min(0f)] public float smoothTime = 0.3f;
         [Min(0f)] public float lookAtHeight = 1f;
@@ -51,11 +57,27 @@ namespace Slime
 
             target = slimeSimulator.CurrentWorldCenter;
 
-        if (InputManager.Instance != null && InputManager.Instance.inputEnable)
+            if (inputEnable && InputManager.Instance != null && InputManager.Instance.inputEnable)
             {
-                cameraAngleX += InputManager.Instance.GetMouseX() * horizontalRotateSpeed;
-                cameraAngleY += InputManager.Instance.GetMouseY() * verticalRotateSpeed;
-                cameraAngleX = Mathf.Clamp(cameraAngleX, minVerticalAngle, maxVerticalAngle);
+                ApplyOrbitInput(
+                    ref cameraAngleX,
+                    ref cameraAngleY,
+                    InputManager.Instance.GetMouseX(),
+                    InputManager.Instance.GetMouseY(),
+                    horizontalRotateSpeed,
+                    verticalRotateSpeed,
+                    minVerticalAngle,
+                    maxVerticalAngle);
+
+                if (enableZoom)
+                    cameraOffset = SetOffsetDistance(
+                        cameraOffset,
+                        CalculateZoomDistance(
+                            cameraOffset.magnitude,
+                            ReadScrollDelta(),
+                            zoomSpeed,
+                            minZoomDistance,
+                            maxZoomDistance));
             }
 
             Quaternion rotation = Quaternion.Euler(cameraAngleX, cameraAngleY, 0);
@@ -96,6 +118,35 @@ namespace Slime
             return transform.forward;
         }
 
+        public static void ApplyOrbitInput(
+            ref float verticalAngle,
+            ref float horizontalAngle,
+            float mouseX,
+            float mouseY,
+            float horizontalSpeed,
+            float verticalSpeed,
+            float minVerticalAngle,
+            float maxVerticalAngle)
+        {
+            horizontalAngle += mouseX * horizontalSpeed;
+            verticalAngle = Mathf.Clamp(
+                verticalAngle - mouseY * verticalSpeed,
+                minVerticalAngle,
+                maxVerticalAngle);
+        }
+
+        public static float CalculateZoomDistance(
+            float currentDistance,
+            float scrollDelta,
+            float zoomSpeed,
+            float minDistance,
+            float maxDistance)
+        {
+            float min = Mathf.Max(MinCastDistance, minDistance);
+            float max = Mathf.Max(min, maxDistance);
+            return Mathf.Clamp(currentDistance - scrollDelta * Mathf.Max(0f, zoomSpeed), min, max);
+        }
+
         bool ResolveSlimeSimulator()
         {
             if (slimeSimulator != null)
@@ -117,6 +168,23 @@ namespace Slime
             mouseX = 0f;
             mouseY = 0f;
 #endif
+        }
+
+        static float ReadScrollDelta()
+        {
+#if ENABLE_LEGACY_INPUT_MANAGER
+            return Input.GetAxis("Mouse ScrollWheel");
+#else
+            return 0f;
+#endif
+        }
+
+        static Vector3 SetOffsetDistance(Vector3 offset, float distance)
+        {
+            if (offset.sqrMagnitude <= MinCastDistance * MinCastDistance)
+                return new Vector3(0f, 0f, -distance);
+
+            return offset.normalized * distance;
         }
 
         Vector3 ResolveCameraPosition(Vector3 lookTarget, Vector3 desiredPosition, out bool collisionAdjusted)

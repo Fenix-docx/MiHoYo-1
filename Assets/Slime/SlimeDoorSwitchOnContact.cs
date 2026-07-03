@@ -6,13 +6,9 @@ using UnityEngine.Events;
 namespace Slime
 {
     [DisallowMultipleComponent]
-    [AddComponentMenu("Slime/Door Switch On Contact")]
+    [AddComponentMenu("Slime/Contact Switch On Contact")]
     public class SlimeDoorSwitchOnContact : MonoBehaviour
     {
-        [Header("Door")]
-        [SerializeField] GameObject objectToHide;
-        [SerializeField] bool restoreObjectWhenContactEnds = true;
-
         [Header("Slime Contact")]
         [SerializeField] SlimeSurfaceBuilder slimeSurface;
         [SerializeField] SlimeSimulator slimeSimulator;
@@ -27,8 +23,12 @@ namespace Slime
         [SerializeField] bool onlyPhysicsContactFromSlime = true;
 
         [Header("Events")]
+        [SerializeField] SlimeContactEventHandler[] eventHandlers = Array.Empty<SlimeContactEventHandler>();
         [SerializeField] UnityEvent onContactBegan;
         [SerializeField] UnityEvent onContactEnded;
+
+        [SerializeField, HideInInspector] GameObject objectToHide;
+        [SerializeField, HideInInspector] bool restoreObjectWhenContactEnds = true;
 
         readonly HashSet<Collider> _physicsContacts = new HashSet<Collider>();
         readonly List<Vector3> _surfaceVertices = new List<Vector3>(4096);
@@ -39,6 +39,9 @@ namespace Slime
 
         public bool HasContact => _hasContact;
         public GameObject ObjectToHide => objectToHide;
+        public IReadOnlyList<SlimeContactEventHandler> EventHandlers => eventHandlers;
+        public SlimeSurfaceBuilder SlimeSurface => slimeSurface;
+        public SlimeSimulator SlimeSimulator => slimeSimulator;
         public UnityEvent OnContactBegan => onContactBegan;
         public UnityEvent OnContactEnded => onContactEnded;
 
@@ -58,7 +61,7 @@ namespace Slime
         void OnEnable()
         {
             RefreshContactColliders();
-            ApplyObjectState();
+            ApplyLegacyObjectState();
         }
 
         void LateUpdate()
@@ -252,20 +255,51 @@ namespace Slime
         {
             if (_hasContact == hasContact)
             {
-                ApplyObjectState();
+                ApplyLegacyObjectState();
                 return;
             }
 
             _hasContact = hasContact;
-            ApplyObjectState();
+            ApplyLegacyObjectState();
+
+            SlimeContactEventContext context = BuildEventContext();
 
             if (_hasContact)
+            {
+                InvokeEventHandlers(context, true);
                 onContactBegan?.Invoke();
+            }
             else
+            {
+                InvokeEventHandlers(context, false);
                 onContactEnded?.Invoke();
+            }
         }
 
-        void ApplyObjectState()
+        SlimeContactEventContext BuildEventContext()
+        {
+            return new SlimeContactEventContext(this, slimeSurface, slimeSimulator);
+        }
+
+        void InvokeEventHandlers(SlimeContactEventContext context, bool contactBegan)
+        {
+            if (eventHandlers == null)
+                return;
+
+            for (int i = 0; i < eventHandlers.Length; i++)
+            {
+                SlimeContactEventHandler eventHandler = eventHandlers[i];
+                if (eventHandler == null)
+                    continue;
+
+                if (contactBegan)
+                    eventHandler.HandleContactBegan(context);
+                else
+                    eventHandler.HandleContactEnded(context);
+            }
+        }
+
+        void ApplyLegacyObjectState()
         {
             if (objectToHide == null)
                 return;

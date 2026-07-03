@@ -171,7 +171,7 @@ namespace Slime
             UpdateAbsorb();
 
             if (enableSurface && _surfaceBuilder)
-                _surfaceBuilder.BuildSurface(_particles, isoLevel);
+                _surfaceBuilder.BuildSurface(_particles, isoLevel, _groups.ControlledGroupId);
 
             _renderer?.SetParticles(_particles);
         }
@@ -341,6 +341,60 @@ namespace Slime
             return count;
         }
 
+        public void TeleportToWorldCenter(Vector3 worldCenter, Quaternion worldRotation, bool resetVelocity = true)
+        {
+            if (!_initialised || !_particles.IsCreated)
+            {
+                transform.SetPositionAndRotation(worldCenter, worldRotation);
+                CurrentWorldCenter = worldCenter;
+                _lastTransformPosition = transform.position;
+                _hasLastTransformPosition = true;
+                return;
+            }
+
+            Vector3 currentWorldCenter = CurrentWorldCenter;
+            if (!IsFinite((float3)currentWorldCenter))
+                currentWorldCenter = (Vector3)(ComputeParticleCenter() * SlimeConst.Scale);
+
+            Vector3 worldDelta = worldCenter - currentWorldCenter;
+            float3 simDelta = (float3)worldDelta * SlimeConst.InvScale;
+            if (!IsFinite(simDelta))
+                return;
+
+            TranslateParticles(_particles, simDelta);
+            TranslateParticles(_particlesTemp, simDelta);
+            TranslatePositions(_posOld, simDelta);
+            TranslatePositions(_posPredict, simDelta);
+            TranslateGroupCentres(simDelta);
+            TranslateControllerCentres(simDelta);
+
+            if (resetVelocity)
+                ResetVelocityBuffers();
+
+            CurrentWorldCenter = worldCenter;
+            transform.SetPositionAndRotation(worldCenter, worldRotation);
+            _lastTransformPosition = transform.position;
+            _hasLastTransformPosition = true;
+
+            if (controllerBody != null)
+            {
+                controllerBody.position = worldCenter;
+                controllerBody.rotation = worldRotation;
+                if (resetVelocity)
+                {
+                    controllerBody.linearVelocity = Vector3.zero;
+                    controllerBody.angularVelocity = Vector3.zero;
+                    SlimeControllerMotor motor = controllerBody.GetComponent<SlimeControllerMotor>();
+                    if (motor != null)
+                        motor.ResetMotion();
+                }
+            }
+
+            _renderer?.SetParticles(_particles);
+            if (enableSurface && _surfaceBuilder != null)
+                _surfaceBuilder.BuildSurface(_particles, isoLevel, _groups.ControlledGroupId);
+        }
+
         static int GetDistributedSourceIndex(int addIndex, int addCount, int sourceCount)
         {
             if (sourceCount <= 1)
@@ -493,6 +547,44 @@ namespace Slime
 
             for (int i = 0; i < positions.Length; i++)
                 positions[i] += delta;
+        }
+
+        void TranslateControllerCentres(float3 delta)
+        {
+            if (!_controllerBuffer.IsCreated)
+                return;
+
+            for (int i = 0; i < _controllerBuffer.Length; i++)
+            {
+                SlimeController controller = _controllerBuffer[i];
+                controller.Center += delta;
+                _controllerBuffer[i] = controller;
+            }
+        }
+
+        void TranslateGroupCentres(float3 delta)
+        {
+            if (!_groupCentres.IsCreated || !_groupCounts.IsCreated)
+                return;
+
+            int count = min(_groupCentres.Length, _groupCounts.Length);
+            for (int i = 0; i < count; i++)
+                _groupCentres[i] += delta * _groupCounts[i];
+        }
+
+        void ResetVelocityBuffers()
+        {
+            if (_velocityBuffer.IsCreated)
+            {
+                for (int i = 0; i < _velocityBuffer.Length; i++)
+                    _velocityBuffer[i] = new float3(0f, 0f, 0f);
+            }
+
+            if (_velocityTempBuffer.IsCreated)
+            {
+                for (int i = 0; i < _velocityTempBuffer.Length; i++)
+                    _velocityTempBuffer[i] = new float3(0f, 0f, 0f);
+            }
         }
 
         static bool IsFinite(float value)
