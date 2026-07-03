@@ -2051,11 +2051,20 @@ MonoBehaviour:
   followSpeed: 5
   rotationSpeed: 5
   cameraOffset: {x: 0, y: 2, z: -5}
+  smoothTime: 0.3
+  lookAtHeight: 1
+  enableCollision: 1
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  collisionRadius: 0.35
+  collisionPadding: 0.08
+  minCollisionDistance: 0.15
   horizontalRotateSpeed: 3
   verticalRotateSpeed: 2
   minVerticalAngle: -30
   maxVerticalAngle: 60
-  smoothTime: 0.3
+  inputEnable: 1
 --- !u!114 &939962733
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3775,7 +3784,8 @@ MonoBehaviour:
   keyDecreaseBoth: 91
   keyIncreaseBoth: 93
   concentrationStep: 4
-  stiffnessStep: 0.1
+  stiffnessStep: 0.05
+  currentstep: 1
   simulateOnStart: 1
 --- !u!4 &1763104532
 Transform:

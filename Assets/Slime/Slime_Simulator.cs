@@ -69,7 +69,8 @@ namespace Slime
         public KeyCode keyDecreaseBoth = KeyCode.LeftBracket;
         public KeyCode keyIncreaseBoth = KeyCode.RightBracket;
         [Range(0.1f, 20f)] public float concentrationStep = 4f;
-        [Range(0.01f, 0.2f)] public float stiffnessStep = 0.1f;
+        [Range(0.01f, 0.2f)] public float stiffnessStep = 0.05f;
+        [Range(1,3)]public int currentstep = 1; //凝聚的阶段，公开出来方便做可视化
 
         [Header("Debug")]
         public bool simulateOnStart = true;
@@ -132,17 +133,17 @@ namespace Slime
             if (!_initialised) return;
 
 
-            if (Input.GetKeyDown(KeyCode.Q)&& isQ)
+            if (Input.GetKeyDown(KeyCode.Q))
             {
                 concentration = max(0.1f, concentration - concentrationStep);
                 shapeStiffness = max(0f, shapeStiffness - stiffnessStep);
-                isQ = false;
+                currentstep ++;
             }
-            if (Input.GetKeyDown(KeyCode.E)&& !isQ)
+            if (Input.GetKeyDown(KeyCode.E))
             {
-                concentration = min(50f, concentration + concentrationStep);
-                shapeStiffness = min(1f, shapeStiffness + stiffnessStep);
-                isQ = true;
+                concentration = min(12f, concentration + concentrationStep);
+                shapeStiffness = min(0.2f, shapeStiffness + stiffnessStep);
+                currentstep --;
             }
 
             // F: peel a fraction of the controlled body into a new split body.

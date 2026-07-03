@@ -51,11 +51,10 @@ namespace Slime
 
             target = slimeSimulator.CurrentWorldCenter;
 
-            if (inputEnable)
+        if (InputManager.Instance != null && InputManager.Instance.inputEnable)
             {
-                ReadMouseDelta(out float mouseX, out float mouseY);
-                cameraAngleX += mouseX * horizontalRotateSpeed;
-                cameraAngleY += mouseY * verticalRotateSpeed;
+                cameraAngleX += InputManager.Instance.GetMouseX() * horizontalRotateSpeed;
+                cameraAngleY += InputManager.Instance.GetMouseY() * verticalRotateSpeed;
                 cameraAngleX = Mathf.Clamp(cameraAngleX, minVerticalAngle, maxVerticalAngle);
             }
 
