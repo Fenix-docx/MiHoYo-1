@@ -70,7 +70,10 @@ namespace Slime
         public KeyCode keyIncreaseBoth = KeyCode.RightBracket;
         [Range(0.1f, 20f)] public float concentrationStep = 4f;
         [Range(0.01f, 0.2f)] public float stiffnessStep = 0.05f;
-        [Range(1,3)]public int currentstep = 1; //凝聚的阶段，公开出来方便做可视化
+        [Range(1, 3)] public int currentstep = 1; //凝聚的阶段，公开出来方便做可视化
+
+        [Header("Runtime UI")]
+        [SerializeField] bool showRuntimeHud = true;
 
         [Header("Debug")]
         public bool simulateOnStart = true;
@@ -123,6 +126,7 @@ namespace Slime
         int _batchCount = 64;
         SlimeRenderer _renderer;
         SlimeSurfaceBuilder _surfaceBuilder;
+        SlimeStatusHud _statusHud;
         bool _initialised;
         bool isQ = true;
         void Start()
@@ -130,6 +134,7 @@ namespace Slime
             CurrentWorldCenter = transform.position;
             if (simulateOnStart)
                 Initialise();
+            EnsureStatusHud();
         }
 
         void Update()
@@ -138,17 +143,9 @@ namespace Slime
 
 
             if (Input.GetKeyDown(KeyCode.Q))
-            {
-                concentration = max(0.1f, concentration - concentrationStep);
-                shapeStiffness = max(0f, shapeStiffness - stiffnessStep);
-                currentstep ++;
-            }
+                ChangeControlledCohesion(-concentrationStep, -stiffnessStep, 1);
             if (Input.GetKeyDown(KeyCode.E))
-            {
-                concentration = min(12f, concentration + concentrationStep);
-                shapeStiffness = min(0.2f, shapeStiffness + stiffnessStep);
-                currentstep --;
-            }
+                ChangeControlledCohesion(concentrationStep, stiffnessStep, -1);
 
             // F: peel a fraction of the controlled body into a new split body.
             if (Input.GetKeyDown(keySplit))
@@ -157,6 +154,32 @@ namespace Slime
             // Tab: cycle control to the next alive body.
             if (Input.GetKeyDown(keySwitchControl))
                 SwitchControl();
+        }
+
+        void ChangeControlledCohesion(float concentrationDelta, float stiffnessDelta, int stepDelta)
+        {
+            concentration = Mathf.Clamp(concentration + concentrationDelta, 0.1f, 12f);
+            shapeStiffness = Mathf.Clamp(shapeStiffness + stiffnessDelta, 0f, 0.2f);
+            currentstep = Mathf.Clamp(currentstep + stepDelta, 1, 3);
+            StoreControlledCohesionState();
+        }
+
+        void StoreControlledCohesionState()
+        {
+            if (_groups == null)
+                return;
+
+            _groups.SetControlledCohesionState(concentration, shapeStiffness, CohesionStep);
+        }
+
+        void SyncCohesionFieldsFromGroup(int groupId)
+        {
+            if (_groups == null || !_groups.IsAlive(groupId))
+                return;
+
+            concentration = _groups.GetConcentration(groupId);
+            shapeStiffness = _groups.GetStiffness(groupId);
+            currentstep = Mathf.Clamp(_groups.GetCohesionStep(groupId), 1, 3);
         }
 
         void FixedUpdate()
@@ -217,6 +240,7 @@ namespace Slime
             _groupStiffness = new NativeArray<float>(SlimeGroupManager.MaxGroups, Allocator.Persistent);
             _shuffledIds = new NativeArray<int>(n, Allocator.Persistent);
             _groups = new SlimeGroupManager();
+            currentstep = Mathf.Clamp(currentstep, 1, 3);
 
             // Single controller covering the whole initial blob
             _controllerBuffer.Add(new SlimeController
@@ -226,7 +250,7 @@ namespace Slime
                 Velocity = new float3(0f, 0f, 0f),
                 Concentration = concentration,
             });
-            _groups.Init(concentration, shapeStiffness);
+            _groups.Init(concentration, shapeStiffness, CohesionStep);
 
             // Interaction: auto-find a motor body if none assigned.
             if (controllerBody == null)
@@ -260,6 +284,7 @@ namespace Slime
             _renderer?.SetParticles(_particles);
 
             _surfaceBuilder = GetComponent<SlimeSurfaceBuilder>();
+            EnsureStatusHud();
         }
 
         public int AddParticles(int count, Vector3 worldCenter, float worldRadius)
@@ -1356,8 +1381,7 @@ namespace Slime
                 _controllerBuffer.Add(new SlimeController());
 
             int ctrlId = _groups.ControlledGroupId;
-            _groups.SetControlledConcentration(concentration);
-            _groups.SetControlledStiffness(shapeStiffness);
+            StoreControlledCohesionState();
 
             float3 controlledCom = new float3(0f, 0f, 0f);
             for (int g = 0; g < _groups.SlotCount; g++)
@@ -1438,6 +1462,58 @@ namespace Slime
         /// <summary>Number of alive split bodies (including the original).</summary>
         public int AliveGroupCount => _groups != null ? _groups.AliveCount : 1;
 
+        public int CohesionStep => Mathf.Clamp(currentstep, 1, 3);
+
+        public float ControlledConcentration =>
+            _groups != null && _groups.IsAlive(ControlledGroupId)
+                ? _groups.GetConcentration(ControlledGroupId)
+                : concentration;
+
+        public float ControlledShapeStiffness =>
+            _groups != null && _groups.IsAlive(ControlledGroupId)
+                ? _groups.GetStiffness(ControlledGroupId)
+                : shapeStiffness;
+
+        public int ControlledGroupOrdinal
+        {
+            get
+            {
+                if (_groups == null)
+                    return 1;
+
+                int ordinal = 0;
+                int controlled = _groups.ControlledGroupId;
+                for (int groupId = 0; groupId < SlimeGroupManager.MaxGroups; groupId++)
+                {
+                    if (!_groups.IsAlive(groupId))
+                        continue;
+
+                    ordinal++;
+                    if (groupId == controlled)
+                        return ordinal;
+                }
+
+                return 1;
+            }
+        }
+
+        public int ControlledParticleCount => GetGroupParticleCount(ControlledGroupId);
+
+        public int GetGroupParticleCount(int groupId)
+        {
+            if (!_particles.IsCreated)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < _particles.Length; i++)
+            {
+                if (_particles[i].ID == groupId)
+                    count++;
+            }
+
+            return count;
+        }
+
         /// <summary>
         /// Horizontal facing direction (world space, normalised) used to aim splits.
         /// Falls back to the controller motor's facing, then world forward.
@@ -1460,6 +1536,7 @@ namespace Slime
         public bool Split(Vector3 facingWorld)
         {
             if (!_initialised || _groups == null) return false;
+            StoreControlledCohesionState();
             float3 facing = (float3)facingWorld; // direction only — scale-invariant
             int sourceGroup = _groups.ControlledGroupId;
             int newGroup = _groups.Split(
@@ -1489,6 +1566,8 @@ namespace Slime
             if (!_initialised || _groups == null) return 0;
             int previousId = _groups.ControlledGroupId;
             int newId = _groups.SwitchControl();
+            if (newId != previousId)
+                SyncCohesionFieldsFromGroup(newId);
 
             // Snap the kinematic motor to the newly controlled body so movement
             // resumes from its position instead of teleporting the blob.
@@ -1510,6 +1589,24 @@ namespace Slime
                 }
             }
             return newId;
+        }
+
+        void EnsureStatusHud()
+        {
+            if (!showRuntimeHud)
+                return;
+
+            if (_statusHud == null)
+                _statusHud = GetComponentInChildren<SlimeStatusHud>(true);
+
+            if (_statusHud == null)
+            {
+                GameObject hudObject = new GameObject("Slime Status HUD", typeof(RectTransform));
+                hudObject.transform.SetParent(transform, false);
+                _statusHud = hudObject.AddComponent<SlimeStatusHud>();
+            }
+
+            _statusHud.Bind(this);
         }
 
         /// <summary>

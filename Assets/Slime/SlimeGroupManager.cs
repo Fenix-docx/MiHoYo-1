@@ -35,6 +35,7 @@ namespace Slime
         readonly bool[] _alive = new bool[MaxGroups];
         readonly float[] _concentration = new float[MaxGroups];
         readonly float[] _stiffness = new float[MaxGroups];
+        readonly int[] _cohesionStep = new int[MaxGroups];
         readonly bool[,] _absorbReady = new bool[MaxGroups, MaxGroups];
         readonly List<int> _freeSlots = new List<int>(MaxGroups);
 
@@ -43,6 +44,7 @@ namespace Slime
         // produces a coherent body even when the parent was in a diffuse state.
         float _initialConcentration;
         float _initialStiffness;
+        int _initialCohesionStep;
 
         public bool CanSplit => AliveCount < MaxGroups;
 
@@ -52,10 +54,11 @@ namespace Slime
         }
 
         /// <summary>Allocate the initial single group covering the whole blob.</summary>
-        public void Init(float concentration, float stiffness)
+        public void Init(float concentration, float stiffness, int cohesionStep = 1)
         {
             _initialConcentration = concentration;
             _initialStiffness = stiffness;
+            _initialCohesionStep = clamp(cohesionStep, 1, 3);
             SlotCount = 0;
             AliveCount = 0;
             ControlledGroupId = 0;
@@ -64,14 +67,15 @@ namespace Slime
                 _alive[i] = false;
                 _concentration[i] = 0f;
                 _stiffness[i] = 0f;
+                _cohesionStep[i] = 0;
                 for (int j = 0; j < MaxGroups; j++)
                     _absorbReady[i, j] = true;
             }
             _freeSlots.Clear();
-            AllocateSlot(concentration, stiffness);
+            AllocateSlot(concentration, stiffness, _initialCohesionStep);
         }
 
-        int AllocateSlot(float concentration, float stiffness)
+        int AllocateSlot(float concentration, float stiffness, int cohesionStep)
         {
             int slot;
             if (_freeSlots.Count > 0)
@@ -88,6 +92,7 @@ namespace Slime
             _alive[slot] = true;
             _concentration[slot] = concentration;
             _stiffness[slot] = stiffness;
+            _cohesionStep[slot] = clamp(cohesionStep, 1, 3);
             AliveCount++;
             return slot;
         }
@@ -100,6 +105,20 @@ namespace Slime
         public float GetStiffness(int groupId) =>
             (uint)groupId < (uint)MaxGroups ? _stiffness[groupId] : 0f;
 
+        public int GetCohesionStep(int groupId) =>
+            (uint)groupId < (uint)MaxGroups ? _cohesionStep[groupId] : 1;
+
+        /// <summary>Update the controlled group's complete cohesion UI/sim state.</summary>
+        public void SetControlledCohesionState(float concentration, float stiffness, int cohesionStep)
+        {
+            if ((uint)ControlledGroupId >= (uint)MaxGroups)
+                return;
+
+            _concentration[ControlledGroupId] = concentration;
+            _stiffness[ControlledGroupId] = stiffness;
+            _cohesionStep[ControlledGroupId] = clamp(cohesionStep, 1, 3);
+        }
+
         /// <summary>Update the controlled group's concentration from the simulator field.</summary>
         public void SetControlledConcentration(float concentration) =>
             _concentration[ControlledGroupId] = concentration;
@@ -107,6 +126,9 @@ namespace Slime
         /// <summary>Update the controlled group's shape-match stiffness from the simulator field.</summary>
         public void SetControlledStiffness(float stiffness) =>
             _stiffness[ControlledGroupId] = stiffness;
+
+        public void SetControlledCohesionStep(int cohesionStep) =>
+            _cohesionStep[ControlledGroupId] = clamp(cohesionStep, 1, 3);
 
         /// <summary>
         /// Split the controlled group. A fixed fraction of particles — those
@@ -154,7 +176,7 @@ namespace Slime
                 math.dot(particles[b].Position, facingDir)
                     .CompareTo(math.dot(particles[a].Position, facingDir)));
 
-            int newGroup = AllocateSlot(_initialConcentration, _initialStiffness);
+            int newGroup = AllocateSlot(_initialConcentration, _initialStiffness, _initialCohesionStep);
 
             for (int g = 0; g < SlotCount; g++)
             {
@@ -402,6 +424,8 @@ namespace Slime
 
             _alive[absorbedGroupId] = false;
             _concentration[absorbedGroupId] = 0f;
+            _stiffness[absorbedGroupId] = 0f;
+            _cohesionStep[absorbedGroupId] = 0;
             _freeSlots.Add(absorbedGroupId);
             AliveCount--;
             for (int g = 0; g < MaxGroups; g++)
