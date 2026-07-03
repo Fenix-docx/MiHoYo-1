@@ -698,18 +698,32 @@ MonoBehaviour:
   m_GameObject: {fileID: 939962727}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a4b0bee7499ae87489fb1045a6102383, type: 3}
+  m_Script: {fileID: 11500000, guid: d805123174216ad42a87e82cea23aaa7, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
-  target: {fileID: 1763104532}
+  m_EditorClassIdentifier: Assembly-CSharp::Slime.CameraFollow_Slime
+  target: {x: 0, y: 0, z: 0}
+  slimeSimulator: {fileID: 1763104530}
   followSpeed: 5
-  rotationSpeed: 3
+  rotationSpeed: 5
   cameraOffset: {x: 0, y: 2, z: -5}
+  enableZoom: 1
+  zoomSpeed: 5
+  minZoomDistance: 2
+  maxZoomDistance: 10
+  smoothTime: 0.3
+  lookAtHeight: 1
+  enableCollision: 1
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  collisionRadius: 0.35
+  collisionPadding: 0.08
+  minCollisionDistance: 0.15
   horizontalRotateSpeed: 3
   verticalRotateSpeed: 2
   minVerticalAngle: -30
   maxVerticalAngle: 60
-  smoothTime: 0.3
+  inputEnable: 1
 --- !u!1 &1054888402
 GameObject:
   m_ObjectHideFlags: 0
@@ -831,7 +845,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1147581789}
-  - component: {fileID: 1147581788}
   m_Layer: 0
   m_Name: Manager
   m_TagString: Untagged
@@ -839,21 +852,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1147581788
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1147581787}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d53caca97428ed46b4f0c915b9f29bf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InputManager
-  jumpKey: 32
-  interactKey: 101
-  inputEnable: 1
 --- !u!4 &1147581789
 Transform:
   m_ObjectHideFlags: 0

@@ -13,6 +13,12 @@ namespace Slime
         public float rotationSpeed = 5f;
         public Vector3 cameraOffset = new Vector3(0, 2, -5);
 
+        [Header("Camera Zoom")]
+        public bool enableZoom = true;
+        [Min(0f)] public float zoomSpeed = 5f;
+        [Min(0.01f)] public float minZoomDistance = 2f;
+        [Min(0.01f)] public float maxZoomDistance = 10f;
+
         [Header("Camera Damping")]
         [Min(0f)] public float smoothTime = 0.3f;
         [Min(0f)] public float lookAtHeight = 1f;
@@ -33,6 +39,7 @@ namespace Slime
 
         private float cameraAngleX = 0f;
         private float cameraAngleY = 0f;
+        private float currentZoomDistance = -1f;
         private Vector3 smoothDampVelocity = Vector3.zero;
         private readonly RaycastHit[] collisionHits = new RaycastHit[16];
 
@@ -41,6 +48,7 @@ namespace Slime
         void Start()
         {
             ResolveSlimeSimulator();
+            currentZoomDistance = ResolveInitialZoomDistance(cameraOffset, minZoomDistance, maxZoomDistance);
             Cursor.visible = false;//鼠标隐藏
         }
 
@@ -53,14 +61,30 @@ namespace Slime
 
             if (inputEnable)
             {
-                ReadMouseDelta(out float mouseX, out float mouseY);
-                cameraAngleX += mouseX * horizontalRotateSpeed;
-                cameraAngleY += mouseY * verticalRotateSpeed;
-                cameraAngleX = Mathf.Clamp(cameraAngleX, minVerticalAngle, maxVerticalAngle);
+                ReadCameraInput(out float mouseX, out float mouseY, out float scrollDelta);
+                ApplyOrbitInput(
+                    ref cameraAngleX,
+                    ref cameraAngleY,
+                    mouseX,
+                    mouseY,
+                    horizontalRotateSpeed,
+                    verticalRotateSpeed,
+                    minVerticalAngle,
+                    maxVerticalAngle);
+
+                if (enableZoom)
+                {
+                    currentZoomDistance = CalculateZoomDistance(
+                        ResolveCurrentZoomDistance(currentZoomDistance, cameraOffset, minZoomDistance, maxZoomDistance),
+                        scrollDelta,
+                        zoomSpeed,
+                        minZoomDistance,
+                        maxZoomDistance);
+                }
             }
 
             Quaternion rotation = Quaternion.Euler(cameraAngleX, cameraAngleY, 0);
-            Vector3 rotatedOffset = rotation * cameraOffset;
+            Vector3 rotatedOffset = rotation * ResolveZoomedCameraOffset(cameraOffset, currentZoomDistance);
 
             Vector3 lookTarget = target + Vector3.up * lookAtHeight;
             Vector3 targetPosition = ResolveCameraPosition(
@@ -109,15 +133,75 @@ namespace Slime
             return slimeSimulator != null;
         }
 
-        static void ReadMouseDelta(out float mouseX, out float mouseY)
+        static void ReadCameraInput(out float mouseX, out float mouseY, out float scrollDelta)
         {
 #if ENABLE_LEGACY_INPUT_MANAGER
             mouseX = Input.GetAxis("Mouse X");
             mouseY = Input.GetAxis("Mouse Y");
+            scrollDelta = Input.GetAxis("Mouse ScrollWheel");
 #else
             mouseX = 0f;
             mouseY = 0f;
+            scrollDelta = 0f;
 #endif
+        }
+
+        public static void ApplyOrbitInput(
+            ref float verticalAngle,
+            ref float horizontalAngle,
+            float mouseX,
+            float mouseY,
+            float horizontalSpeed,
+            float verticalSpeed,
+            float minVerticalAngle,
+            float maxVerticalAngle)
+        {
+            horizontalAngle += mouseX * horizontalSpeed;
+            verticalAngle -= mouseY * verticalSpeed;
+            verticalAngle = Mathf.Clamp(verticalAngle, minVerticalAngle, maxVerticalAngle);
+        }
+
+        public static float CalculateZoomDistance(
+            float currentDistance,
+            float scrollDelta,
+            float zoomSpeed,
+            float minDistance,
+            float maxDistance)
+        {
+            float min = Mathf.Max(MinCastDistance, minDistance);
+            float max = Mathf.Max(min, maxDistance);
+            float distance = currentDistance - scrollDelta * Mathf.Max(0f, zoomSpeed);
+            return Mathf.Clamp(distance, min, max);
+        }
+
+        static float ResolveInitialZoomDistance(Vector3 offset, float minDistance, float maxDistance)
+        {
+            return CalculateZoomDistance(Mathf.Abs(offset.z), 0f, 0f, minDistance, maxDistance);
+        }
+
+        static float ResolveCurrentZoomDistance(
+            float distance,
+            Vector3 offset,
+            float minDistance,
+            float maxDistance)
+        {
+            if (distance > 0f)
+                return CalculateZoomDistance(distance, 0f, 0f, minDistance, maxDistance);
+
+            return ResolveInitialZoomDistance(offset, minDistance, maxDistance);
+        }
+
+        static Vector3 ResolveZoomedCameraOffset(Vector3 offset, float distance)
+        {
+            if (distance <= 0f)
+                return offset;
+
+            float zSign = offset.z >= 0f ? 1f : -1f;
+            if (Mathf.Abs(offset.z) <= MinCastDistance)
+                zSign = -1f;
+
+            offset.z = zSign * distance;
+            return offset;
         }
 
         Vector3 ResolveCameraPosition(Vector3 lookTarget, Vector3 desiredPosition, out bool collisionAdjusted)
