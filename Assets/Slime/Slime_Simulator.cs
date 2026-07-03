@@ -551,7 +551,7 @@ namespace Slime
         {
             if (_colliderBuffer.IsCreated) _colliderBuffer.Dispose();
 
-            Collider[] colliders = Object.FindObjectsByType<Collider>(FindObjectsInactive.Exclude);
+            Collider[] colliders = Object.FindObjectsOfType<Collider>(false);
 
             int count = 0;
             for (int i = 0; i < colliders.Length; i++)
