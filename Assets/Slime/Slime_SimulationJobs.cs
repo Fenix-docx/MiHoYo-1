@@ -63,7 +63,7 @@ namespace Slime
                     // periphery is never driven by the main body's motion.
                     float3 groupCom = controllerCenter;
                     if (GroupCentres.IsCreated && (uint)p.ID < (uint)GroupCentres.Length && GroupCounts[p.ID] > 0)
-                        groupCom = GroupCentres[p.ID];
+                        groupCom = GroupCentres[p.ID] / GroupCounts[p.ID];
                     float distToGroupCom = length(p.Position - groupCom);
                     float coreWeight = MoveCoreRadius <= 0f ? 1f :
                         saturate(1f - distToGroupCom / max(MoveCoreRadius, 0.001f));

@@ -104,6 +104,7 @@ namespace Slime
         NativeArray<float> _groupStiffness;  // per-group shape-match stiffness (length MaxGroups)
         NativeArray<int> _shuffledIds;       // particle IDs in cell-grouped (shuffled) order
         SlimeGroupManager _groups;
+        SlimeControllerMotor _controllerMotor;
         SlimeShapeTarget _shapeTarget;
         Mesh _activeShapeTargetMesh;
         Transform _activeShapeTargetTransform;
@@ -114,6 +115,9 @@ namespace Slime
         float3 _shapeLocalCenter;
         Vector3 _lastTransformPosition;
         bool _hasLastTransformPosition;
+        Vector3 _lastControllerBodyPosition;
+        bool _hasLastControllerBodyPosition;
+        int _lastControllerBodyGroupId = -1;
         float _absorbCooldown; // >0 suppresses absorb right after a split
 
         int _batchCount = 64;
@@ -160,6 +164,7 @@ namespace Slime
             if (!_initialised) return;
 
             SyncTransformTranslation();
+            SyncControllerBodyTranslation();
             RebuildShapeTargetIfNeeded();
             UpdateShapeTargetMorph(Time.fixedDeltaTime);
 
@@ -171,7 +176,7 @@ namespace Slime
             UpdateAbsorb();
 
             if (enableSurface && _surfaceBuilder)
-                _surfaceBuilder.BuildSurface(_particles, isoLevel, _groups.ControlledGroupId);
+                _surfaceBuilder.BuildSurface(_particles, isoLevel);
 
             _renderer?.SetParticles(_particles);
         }
@@ -223,15 +228,28 @@ namespace Slime
             });
             _groups.Init(concentration, shapeStiffness);
 
-            // Interaction: auto-find a Rigidbody motor if none assigned.
+            // Interaction: auto-find a motor body if none assigned.
             if (controllerBody == null)
-                controllerBody = GetComponentInChildren<Rigidbody>();
+                controllerBody = ResolveControllerBody();
+            _controllerMotor = ResolveControllerMotor();
 
             RebuildColliders();
             RebuildShapeTargetIfNeeded(force: true);
 
             _lastTransformPosition = transform.position;
             _hasLastTransformPosition = true;
+            if (controllerBody != null)
+            {
+                _lastControllerBodyPosition = controllerBody.position;
+                _hasLastControllerBodyPosition = true;
+                _lastControllerBodyGroupId = _groups.ControlledGroupId;
+            }
+            else
+            {
+                _lastControllerBodyPosition = transform.position;
+                _hasLastControllerBodyPosition = false;
+                _lastControllerBodyGroupId = -1;
+            }
 
             SpawnParticles();
             InitRestOffsets();
@@ -343,12 +361,16 @@ namespace Slime
 
         public void TeleportToWorldCenter(Vector3 worldCenter, Quaternion worldRotation, bool resetVelocity = true)
         {
+            if (!IsFinite((float3)worldCenter))
+                return;
+
             if (!_initialised || !_particles.IsCreated)
             {
                 transform.SetPositionAndRotation(worldCenter, worldRotation);
                 CurrentWorldCenter = worldCenter;
                 _lastTransformPosition = transform.position;
                 _hasLastTransformPosition = true;
+                TeleportControllerBody(worldCenter, worldRotation, resetVelocity);
                 return;
             }
 
@@ -375,24 +397,11 @@ namespace Slime
             transform.SetPositionAndRotation(worldCenter, worldRotation);
             _lastTransformPosition = transform.position;
             _hasLastTransformPosition = true;
-
-            if (controllerBody != null)
-            {
-                controllerBody.position = worldCenter;
-                controllerBody.rotation = worldRotation;
-                if (resetVelocity)
-                {
-                    controllerBody.linearVelocity = Vector3.zero;
-                    controllerBody.angularVelocity = Vector3.zero;
-                    SlimeControllerMotor motor = controllerBody.GetComponent<SlimeControllerMotor>();
-                    if (motor != null)
-                        motor.ResetMotion();
-                }
-            }
+            TeleportControllerBody(worldCenter, worldRotation, resetVelocity);
 
             _renderer?.SetParticles(_particles);
             if (enableSurface && _surfaceBuilder != null)
-                _surfaceBuilder.BuildSurface(_particles, isoLevel, _groups.ControlledGroupId);
+                _surfaceBuilder.BuildSurface(_particles, isoLevel);
         }
 
         static int GetDistributedSourceIndex(int addIndex, int addCount, int sourceCount)
@@ -450,6 +459,93 @@ namespace Slime
             array = resized;
         }
         #endregion  
+        #region Scene references
+
+        Rigidbody ResolveControllerBody()
+        {
+            SlimeControllerMotor childMotor = GetComponentInChildren<SlimeControllerMotor>();
+            if (childMotor != null && childMotor.TryGetComponent(out Rigidbody childBody))
+            {
+                _controllerMotor = childMotor;
+                return childBody;
+            }
+
+            Rigidbody childRigidbody = GetComponentInChildren<Rigidbody>();
+            if (childRigidbody != null)
+                return childRigidbody;
+
+            SlimeControllerMotor[] sceneMotors =
+                Object.FindObjectsByType<SlimeControllerMotor>(FindObjectsInactive.Exclude);
+            if (sceneMotors.Length == 1 && sceneMotors[0].TryGetComponent(out Rigidbody sceneBody))
+            {
+                _controllerMotor = sceneMotors[0];
+                return sceneBody;
+            }
+
+            return null;
+        }
+
+        SlimeControllerMotor ResolveControllerMotor()
+        {
+            if (_controllerMotor != null)
+            {
+                if (controllerBody == null)
+                    return _controllerMotor;
+
+                if (_controllerMotor.TryGetComponent(out Rigidbody cachedBody) && cachedBody == controllerBody)
+                    return _controllerMotor;
+
+                _controllerMotor = null;
+            }
+
+            if (controllerBody != null)
+            {
+                if (controllerBody.TryGetComponent(out SlimeControllerMotor bodyMotor))
+                    return bodyMotor;
+
+                return null;
+            }
+
+            SlimeControllerMotor childMotor = GetComponentInChildren<SlimeControllerMotor>();
+            if (childMotor != null)
+                return childMotor;
+
+            SlimeControllerMotor[] sceneMotors =
+                Object.FindObjectsByType<SlimeControllerMotor>(FindObjectsInactive.Exclude);
+            return sceneMotors.Length == 1 ? sceneMotors[0] : null;
+        }
+
+        Vector3 ResolveControllerVelocity()
+        {
+            SlimeControllerMotor motor = ResolveControllerMotor();
+            if (motor != null)
+            {
+                _controllerMotor = motor;
+                return motor.CommandedVelocity;
+            }
+
+            return controllerBody != null ? controllerBody.linearVelocity : Vector3.zero;
+        }
+
+        Vector3 ResolveSpawnCenter()
+        {
+            return controllerBody != null ? controllerBody.position : transform.position;
+        }
+
+        Transform ResolveDefaultShapeTargetTransform()
+        {
+            if (shapeTargetTransform != null)
+                return shapeTargetTransform;
+
+            return controllerBody != null ? controllerBody.transform : transform;
+        }
+
+        bool IsTransformDrivenByControllerBody()
+        {
+            return controllerBody != null && controllerBody.transform == transform;
+        }
+
+        #endregion
         #region Particle spawn
 
         void SpawnParticles()
@@ -471,7 +567,7 @@ namespace Slime
 
             float radius = SlimeConst.Width * 0.25f;
             float goldenAngle = PI * (3f - sqrt(5f));
-            float3 origin = (float3)transform.position * SlimeConst.InvScale;
+            float3 origin = (float3)ResolveSpawnCenter() * SlimeConst.InvScale;
 
             for (int i = 0; i < _particles.Length; i++)
             {
@@ -504,6 +600,9 @@ namespace Slime
             Vector3 worldDelta = current - _lastTransformPosition;
             _lastTransformPosition = current;
 
+            if (IsTransformDrivenByControllerBody())
+                return;
+
             if (worldDelta.sqrMagnitude < 1e-12f)
                 return;
 
@@ -527,6 +626,49 @@ namespace Slime
             }
         }
 
+        void SyncControllerBodyTranslation()
+        {
+            if (controllerBody == null || _groups == null)
+                return;
+
+            int groupId = _groups.ControlledGroupId;
+            Vector3 current = controllerBody.position;
+            if (!_hasLastControllerBodyPosition || _lastControllerBodyGroupId != groupId)
+            {
+                _lastControllerBodyPosition = current;
+                _hasLastControllerBodyPosition = true;
+                _lastControllerBodyGroupId = groupId;
+                return;
+            }
+
+            Vector3 worldDelta = current - _lastControllerBodyPosition;
+            _lastControllerBodyPosition = current;
+
+            if (worldDelta.sqrMagnitude < 1e-12f)
+                return;
+
+            float3 simDelta = (float3)worldDelta * SlimeConst.InvScale;
+            if (!IsFinite(simDelta))
+                return;
+
+            TranslateParticles(_particles, simDelta, groupId);
+            TranslateParticles(_particlesTemp, simDelta, groupId);
+            TranslatePositions(_posOld, _particles, simDelta, groupId);
+            TranslatePositions(_posPredict, _particles, simDelta, groupId);
+
+            if (_groupCentres.IsCreated && (uint)groupId < (uint)_groupCentres.Length)
+                _groupCentres[groupId] += simDelta * max(0, _groupCounts[groupId]);
+
+            if (_controllerBuffer.IsCreated && (uint)groupId < (uint)_controllerBuffer.Length)
+            {
+                SlimeController ctrl = _controllerBuffer[groupId];
+                ctrl.Center = (float3)current * SlimeConst.InvScale;
+                ctrl.Radius = SlimeConst.InvScale * 5f;
+                ctrl.Velocity = (float3)ResolveControllerVelocity() * SlimeConst.InvScale;
+                _controllerBuffer[groupId] = ctrl;
+            }
+        }
+
         static void TranslateParticles(NativeArray<SlimeParticle> particles, float3 delta)
         {
             if (!particles.IsCreated)
@@ -540,6 +682,22 @@ namespace Slime
             }
         }
 
+        static void TranslateParticles(NativeArray<SlimeParticle> particles, float3 delta, int groupId)
+        {
+            if (!particles.IsCreated)
+                return;
+
+            for (int i = 0; i < particles.Length; i++)
+            {
+                SlimeParticle particle = particles[i];
+                if (particle.ID != groupId)
+                    continue;
+
+                particle.Position += delta;
+                particles[i] = particle;
+            }
+        }
+
         static void TranslatePositions(NativeArray<float3> positions, float3 delta)
         {
             if (!positions.IsCreated)
@@ -547,6 +705,23 @@ namespace Slime
 
             for (int i = 0; i < positions.Length; i++)
                 positions[i] += delta;
+        }
+
+        static void TranslatePositions(
+            NativeArray<float3> positions,
+            NativeArray<SlimeParticle> particles,
+            float3 delta,
+            int groupId)
+        {
+            if (!positions.IsCreated || !particles.IsCreated)
+                return;
+
+            int count = min(positions.Length, particles.Length);
+            for (int i = 0; i < count; i++)
+            {
+                if (particles[i].ID == groupId)
+                    positions[i] += delta;
+            }
         }
 
         void TranslateControllerCentres(float3 delta)
@@ -569,7 +744,7 @@ namespace Slime
 
             int count = min(_groupCentres.Length, _groupCounts.Length);
             for (int i = 0; i < count; i++)
-                _groupCentres[i] += delta * _groupCounts[i];
+                _groupCentres[i] += delta * max(0, _groupCounts[i]);
         }
 
         void ResetVelocityBuffers()
@@ -584,6 +759,33 @@ namespace Slime
             {
                 for (int i = 0; i < _velocityTempBuffer.Length; i++)
                     _velocityTempBuffer[i] = new float3(0f, 0f, 0f);
+            }
+        }
+
+        void TeleportControllerBody(Vector3 worldCenter, Quaternion worldRotation, bool resetVelocity)
+        {
+            _controllerMotor = ResolveControllerMotor();
+
+            if (controllerBody != null)
+            {
+                controllerBody.position = worldCenter;
+                controllerBody.rotation = worldRotation;
+                controllerBody.transform.SetPositionAndRotation(worldCenter, worldRotation);
+
+                if (resetVelocity)
+                {
+                    controllerBody.linearVelocity = Vector3.zero;
+                    controllerBody.angularVelocity = Vector3.zero;
+                    _controllerMotor?.ResetMotion();
+                }
+
+                _lastControllerBodyPosition = controllerBody.position;
+                _hasLastControllerBodyPosition = true;
+                _lastControllerBodyGroupId = _groups != null ? _groups.ControlledGroupId : -1;
+            }
+            else if (resetVelocity)
+            {
+                _controllerMotor?.ResetMotion();
             }
         }
 
@@ -819,7 +1021,7 @@ namespace Slime
             if (shapeTargetMesh != null)
             {
                 mesh = shapeTargetMesh;
-                targetTransform = shapeTargetTransform != null ? shapeTargetTransform : transform;
+                targetTransform = ResolveDefaultShapeTargetTransform();
                 return true;
             }
 
@@ -1112,12 +1314,15 @@ namespace Slime
             if (_groupStiffness.IsCreated) _groupStiffness.Dispose();
             if (_shuffledIds.IsCreated) _shuffledIds.Dispose();
             if (_shapeTarget.IsCreated) _shapeTarget.Dispose();
+            _controllerMotor = null;
             _activeShapeTargetMesh = null;
             _activeShapeTargetTransform = null;
             _activeShapeSdfResolution = 0;
             _shapeRestMorphActive = false;
             _shapeLocalCenter = new float3(0f, 0f, 0f);
             _hasLastTransformPosition = false;
+            _hasLastControllerBodyPosition = false;
+            _lastControllerBodyGroupId = -1;
             _initialised = false;
         }
         #endregion  
@@ -1182,7 +1387,7 @@ namespace Slime
                     {
                         c.Center = (float3)controllerBody.position * SlimeConst.InvScale;
                         c.Radius = SlimeConst.InvScale * 5f; // keep whole blob in range
-                        c.Velocity = (float3)controllerBody.linearVelocity * SlimeConst.InvScale;
+                        c.Velocity = (float3)ResolveControllerVelocity() * SlimeConst.InvScale;
                     }
                     else
                     {
@@ -1293,8 +1498,13 @@ namespace Slime
                 if (count > 0)
                 {
                     Vector3 worldCom = (Vector3)(com * SlimeConst.Scale);
+                    CurrentWorldCenter = worldCom;
                     worldCom.y = max(worldCom.y, controllerBody.transform.position.y);
+                    controllerBody.position = worldCom;
                     controllerBody.transform.position = worldCom;
+                    _lastControllerBodyPosition = controllerBody.position;
+                    _hasLastControllerBodyPosition = true;
+                    _lastControllerBodyGroupId = newId;
                     if (controllerBody is Rigidbody rb)
                         rb.linearVelocity = Vector3.zero;
                 }

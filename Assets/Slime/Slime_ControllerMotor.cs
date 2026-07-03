@@ -10,12 +10,7 @@ namespace Slime
         [Min(0f)] public float moveSpeed = 3f;
         [SerializeField]
 
-        private float sprintSpeed = 3f;//加速倍数
-
-
-
-   
-
+        private float sprintMultiplier = 3f;//加速倍数
         [Min(0f)] public float jumpSpeed = 3f;
 
         [Header("Facing")]
@@ -31,6 +26,8 @@ namespace Slime
         float _vy;
         bool _grounded = true;
         bool _jumpQueued;
+
+        public Vector3 CommandedVelocity { get; private set; }
 
 
         void Awake()
@@ -62,7 +59,7 @@ namespace Slime
 
             Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             Quaternion rotation = ResolveCameraFacingRotation(_rb.rotation);
-            float speed = Input.GetKey(KeyCode.LeftShift) ? moveSpeed*sprintSpeed : moveSpeed;
+            float speed = Input.GetKey(KeyCode.LeftShift) ? moveSpeed*sprintMultiplier : moveSpeed;
             Vector3 v = CalculatePlanarMoveVelocity(rotation, input, speed);
             
             if (_jumpQueued)
@@ -84,10 +81,12 @@ namespace Slime
                 _grounded = true;
             }
 
+            CommandedVelocity = new Vector3(v.x, _vy, v.z);
+
             _rb.MovePosition(pos);
             _rb.MoveRotation(rotation);
             // Expose the commanded velocity for the simulator to read back.
-            _rb.linearVelocity = new Vector3(v.x, _vy, v.z);
+            _rb.linearVelocity = CommandedVelocity;
 
         }
 
@@ -96,6 +95,10 @@ namespace Slime
             _vy = 0f;
             _grounded = true;
             _jumpQueued = false;
+            CommandedVelocity = Vector3.zero;
+
+            if (_rb == null)
+                _rb = GetComponent<Rigidbody>();
 
             if (_rb != null)
             {

@@ -48,6 +48,54 @@ namespace Slime.Tests
         }
 
         [Test]
+        public void TeleportToWorldCenterMovesControllerBodyAndClearsMotorMotion()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Simulator");
+            GameObject controllerObject = new GameObject("Slime Controller");
+
+            try
+            {
+                controllerObject.transform.SetPositionAndRotation(
+                    new Vector3(1f, 1f, 1f),
+                    Quaternion.Euler(0f, 15f, 0f));
+                Rigidbody controllerBody = controllerObject.AddComponent<Rigidbody>();
+                SlimeControllerMotor motor = controllerObject.AddComponent<SlimeControllerMotor>();
+
+                SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+                simulator.simulateOnStart = false;
+                simulator.enableSurface = false;
+                simulator.enableMeshShapeTarget = false;
+                simulator.enableShapeMatch = false;
+                simulator.gravity = 0f;
+                simulator.concentration = 0f;
+                simulator.controllerBody = controllerBody;
+                simulator.Initialise();
+
+                SetPrivateField(motor, "<CommandedVelocity>k__BackingField", new Vector3(2f, 0f, -1f));
+                controllerBody.linearVelocity = new Vector3(2f, 3f, 4f);
+                controllerBody.angularVelocity = new Vector3(0.5f, 1f, 1.5f);
+
+                Vector3 target = new Vector3(3f, 2f, -4f);
+                Quaternion rotation = Quaternion.Euler(0f, 90f, 0f);
+                simulator.TeleportToWorldCenter(target, rotation, true);
+
+                Assert.That(Vector3.Distance(simulator.CurrentWorldCenter, target), Is.LessThan(0.01f));
+                Assert.That(math.distance(GetParticleCenter(simulator), (float3)target * SlimeConst.InvScale), Is.LessThan(0.01f));
+                Assert.That(Vector3.Distance(controllerBody.position, target), Is.LessThan(0.001f));
+                Assert.That(Quaternion.Angle(controllerBody.rotation, rotation), Is.LessThan(0.001f));
+                Assert.That(controllerBody.linearVelocity, Is.EqualTo(Vector3.zero));
+                Assert.That(controllerBody.angularVelocity, Is.EqualTo(Vector3.zero));
+                Assert.That(motor.CommandedVelocity, Is.EqualTo(Vector3.zero));
+            }
+            finally
+            {
+                Object.DestroyImmediate(controllerObject);
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
+        [Test]
         public void CheckpointZoneRefreshesManagerCheckpoint()
         {
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);

@@ -432,52 +432,7 @@ namespace Slime.Tests
             }
         }
 
-        // Selection outline
-
-        [Test]
-        public void SurfaceBuilderBuildsOutlineForSelectedGroupOnly()
-        {
-            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            GameObject surfaceObject = new GameObject("Slime Selection Outline Test");
-            surfaceObject.AddComponent<MeshFilter>();
-            surfaceObject.AddComponent<MeshRenderer>();
-
-            var particles = new NativeArray<SlimeParticle>(128, Allocator.TempJob);
-
-            try
-            {
-                SlimeSurfaceBuilder builder = surfaceObject.AddComponent<SlimeSurfaceBuilder>();
-                builder.enableSelectionOutline = true;
-                builder.selectionOutlineWidth = 0.05f;
-
-                for (int i = 0; i < particles.Length; i++)
-                {
-                    int groupId = i < particles.Length / 2 ? 0 : 1;
-                    int local = i % (particles.Length / 2);
-                    float t = (local + 0.5f) / (particles.Length / 2);
-                    float y = 1f - 2f * t;
-                    float ring = sqrt(max(0f, 1f - y * y));
-                    float theta = local * PI * (3f - sqrt(5f));
-                    float3 center = groupId == 0 ? new float3(-6f, 1f, 0f) : new float3(6f, 1f, 0f);
-                    float3 offset = new float3(cos(theta) * ring, y, sin(theta) * ring) * 0.25f;
-                    particles[i] = new SlimeParticle { Position = center + offset, ID = groupId };
-                }
-
-                builder.BuildSurface(particles, isoLevel: 0.01f, selectedGroupId: 1);
-                Assert.That(builder.HasSelectionOutline, Is.True);
-                Assert.That(builder.CurrentSelectionOutlineMesh.vertexCount, Is.GreaterThan(0));
-
-                builder.BuildSurface(particles, isoLevel: 0.01f, selectedGroupId: 7);
-                Assert.That(builder.HasSelectionOutline, Is.False);
-            }
-            finally
-            {
-                particles.Dispose();
-                Object.DestroyImmediate(surfaceObject);
-            }
-        }
-
-        // ApplyForceJob: velocity-follow only affects the controlled group
+        // ── ApplyForceJob: velocity-follow only affects the controlled group ──
 
         [Test]
         public void VelocityFollowDoesNotDriveNonControlledGroup()
@@ -537,6 +492,59 @@ namespace Slime.Tests
                 // Group 1 must have no forward (X) velocity component from the motor.
                 Assert.That(vel[1].x, Is.LessThan(1e-3f),
                     "split-off group is not driven by the motor");
+            }
+            finally
+            {
+                ps.Dispose();
+                psNew.Dispose();
+                vel.Dispose();
+                centres.Dispose();
+                counts.Dispose();
+                controllers.Dispose();
+            }
+        }
+
+        [Test]
+        public void VelocityFollowUsesGroupCenterOfMassNotCenterSum()
+        {
+            var ps = new NativeArray<SlimeParticle>(2, Allocator.TempJob);
+            var psNew = new NativeArray<SlimeParticle>(2, Allocator.TempJob);
+            var vel = new NativeArray<float3>(2, Allocator.TempJob);
+            var centres = new NativeArray<float3>(2, Allocator.TempJob);
+            var counts = new NativeArray<int>(2, Allocator.TempJob);
+            var controllers = new NativeList<SlimeController>(1, Allocator.TempJob);
+
+            try
+            {
+                ps[0] = new SlimeParticle { Position = new float3(10f, 1f, 0f), ID = 0 };
+                ps[1] = new SlimeParticle { Position = new float3(12f, 1f, 0f), ID = 0 };
+                centres[0] = ps[0].Position + ps[1].Position; // ComputeCenterJob stores a sum.
+                counts[0] = 2;
+
+                controllers.Add(new SlimeController
+                {
+                    Center = new float3(11f, 1f, 0f),
+                    Radius = 0f,
+                    Velocity = new float3(10f, 0f, 0f),
+                    Concentration = 0f,
+                });
+
+                new SlimeSimulation.ApplyForceJob
+                {
+                    Controllers = controllers,
+                    Ps = ps,
+                    PsNew = psNew,
+                    Velocity = vel,
+                    Gravity = new float3(0f, 0f, 0f),
+                    VelocityFollowGain = 1f,
+                    ControlledGroupId = 0,
+                    GroupCentres = centres,
+                    GroupCounts = counts,
+                    MoveCoreRadius = 2f,
+                }.Schedule(2, 1).Complete();
+
+                Assert.That(vel[0].x, Is.GreaterThan(1f),
+                    "core follow must compare particles against COM, not the raw centre sum");
             }
             finally
             {
@@ -632,11 +640,266 @@ namespace Slime.Tests
             }
         }
 
+        [Test]
+        public void ControllerMovementOnSimulatorObjectTranslatesOnlyControlledGroup()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Same Object Controller Regression");
+
+            try
+            {
+                Rigidbody controllerBody = simulatorObject.AddComponent<Rigidbody>();
+                simulatorObject.AddComponent<SlimeControllerMotor>();
+                SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+                simulator.simulateOnStart = false;
+                simulator.enableSurface = false;
+                simulator.enableMeshShapeTarget = false;
+                simulator.gravity = 0f;
+                simulator.controllerBody = controllerBody;
+                simulator.Initialise();
+
+                NativeArray<SlimeParticle> particles =
+                    GetPrivateField<NativeArray<SlimeParticle>>(simulator, "_particles");
+                SlimeParticle splitParticle = particles[1];
+                splitParticle.ID = 1;
+                particles[1] = splitParticle;
+                float3 controlledBefore = particles[0].Position;
+                float3 splitBefore = particles[1].Position;
+
+                simulatorObject.transform.position += Vector3.right;
+                InvokePrivate(simulator, "SyncControllerBodyTranslation");
+
+                Assert.That(distance(particles[0].Position, controlledBefore + new float3(SlimeConst.InvScale, 0f, 0f)),
+                    Is.LessThan(0.0001f), "controller movement should directly carry the controlled group");
+                Assert.That(distance(particles[1].Position, splitBefore), Is.LessThan(0.0001f),
+                    "controller movement must not carry split groups");
+            }
+            finally
+            {
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
+        [Test]
+        public void InitialParticlesSpawnAroundSeparatedControllerBody()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Root");
+            GameObject controllerObject = new GameObject("Slime Controller");
+
+            try
+            {
+                simulatorObject.transform.position = new Vector3(10f, 0f, 0f);
+                controllerObject.transform.position = new Vector3(3f, 0f, 0f);
+                Rigidbody controllerBody = controllerObject.AddComponent<Rigidbody>();
+                controllerObject.AddComponent<SlimeControllerMotor>();
+
+                SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+                simulator.simulateOnStart = false;
+                simulator.enableSurface = false;
+                simulator.enableMeshShapeTarget = false;
+                simulator.gravity = 0f;
+                simulator.controllerBody = controllerBody;
+                simulator.Initialise();
+
+                NativeArray<SlimeParticle> particles =
+                    GetPrivateField<NativeArray<SlimeParticle>>(simulator, "_particles");
+                float3 center = new float3(0f, 0f, 0f);
+                for (int i = 0; i < particles.Length; i++)
+                    center += particles[i].Position;
+                center /= particles.Length;
+
+                Vector3 worldCenter = (Vector3)(center * SlimeConst.Scale);
+                Assert.That(Vector3.Distance(worldCenter, controllerObject.transform.position), Is.LessThan(0.25f),
+                    "a separated motor should define the spawned slime centre");
+                Assert.That(Vector3.Distance(worldCenter, simulatorObject.transform.position), Is.GreaterThan(1f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(controllerObject);
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
+        [Test]
+        public void DirectMeshShapeTargetDefaultsToControllerTransform()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Root");
+            GameObject controllerObject = new GameObject("Slime Controller");
+            Mesh mesh = new Mesh();
+
+            try
+            {
+                Rigidbody controllerBody = controllerObject.AddComponent<Rigidbody>();
+                controllerObject.AddComponent<SlimeControllerMotor>();
+                SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+                simulator.controllerBody = controllerBody;
+                simulator.shapeTargetMesh = mesh;
+
+                bool resolved = simulator.TryResolveMeshShapeTarget(
+                    out Mesh resolvedMesh,
+                    out Transform resolvedTransform,
+                    out string error);
+
+                Assert.That(resolved, Is.True, error);
+                Assert.That(resolvedMesh, Is.SameAs(mesh));
+                Assert.That(resolvedTransform, Is.SameAs(controllerObject.transform),
+                    "mesh assets without an explicit shape target transform should follow the controller frame");
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(controllerObject);
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
+        [Test]
+        public void ControlUsesMotorCommandedVelocityWhenRigidbodyVelocityIsZero()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Root");
+            GameObject controllerObject = new GameObject("Slime Controller");
+
+            try
+            {
+                Rigidbody controllerBody = controllerObject.AddComponent<Rigidbody>();
+                SlimeControllerMotor motor = controllerObject.AddComponent<SlimeControllerMotor>();
+                SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+                simulator.simulateOnStart = false;
+                simulator.enableSurface = false;
+                simulator.enableMeshShapeTarget = false;
+                simulator.gravity = 0f;
+                simulator.controllerBody = controllerBody;
+                simulator.Initialise();
+
+                SetPrivateField(motor, "<CommandedVelocity>k__BackingField", Vector3.right * 2f);
+                controllerBody.linearVelocity = Vector3.zero;
+                Assert.That(motor.CommandedVelocity.x, Is.EqualTo(2f).Within(0.0001f));
+
+                InvokePrivate(simulator, "Control");
+
+                NativeList<SlimeController> controllers =
+                    GetPrivateField<NativeList<SlimeController>>(simulator, "_controllerBuffer");
+                Assert.That(controllers[0].Velocity.x, Is.EqualTo(2f * SlimeConst.InvScale).Within(0.0001f),
+                    "kinematic motor movement should reach the simulator even when Rigidbody velocity is zero");
+            }
+            finally
+            {
+                Object.DestroyImmediate(controllerObject);
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
+        [Test]
+        public void SwitchControlUpdatesCameraTargetCenterImmediately()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Root");
+            GameObject controllerObject = new GameObject("Slime Controller");
+
+            try
+            {
+                Rigidbody controllerBody = controllerObject.AddComponent<Rigidbody>();
+                controllerObject.AddComponent<SlimeControllerMotor>();
+                SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+                simulator.simulateOnStart = false;
+                simulator.enableSurface = false;
+                simulator.enableMeshShapeTarget = false;
+                simulator.gravity = 0f;
+                simulator.controllerBody = controllerBody;
+                simulator.splitFraction = 0.5f;
+                simulator.splitSeparation = 5f;
+                simulator.minParticlesToSplit = 16;
+                simulator.Initialise();
+
+                Assert.That(simulator.Split(Vector3.right), Is.True);
+                int controlled = simulator.SwitchControl();
+
+                NativeArray<SlimeParticle> particles =
+                    GetPrivateField<NativeArray<SlimeParticle>>(simulator, "_particles");
+                SlimeGroupManager.GroupBounds(particles, controlled, out float3 com, out _, out int count);
+
+                Assert.That(count, Is.GreaterThan(0));
+                Assert.That(Vector3.Distance(simulator.CurrentWorldCenter, (Vector3)(com * SlimeConst.Scale)),
+                    Is.LessThan(0.0001f), "camera target should reflect the newly controlled group immediately");
+            }
+            finally
+            {
+                Object.DestroyImmediate(controllerObject);
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
+        [Test]
+        public void FirstControllerSyncAfterSwitchDoesNotMoveNewGroupToOldTarget()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject simulatorObject = new GameObject("Slime Root");
+            GameObject controllerObject = new GameObject("Slime Controller");
+
+            try
+            {
+                Rigidbody controllerBody = controllerObject.AddComponent<Rigidbody>();
+                controllerObject.AddComponent<SlimeControllerMotor>();
+                SlimeSimulator simulator = simulatorObject.AddComponent<SlimeSimulator>();
+                simulator.simulateOnStart = false;
+                simulator.enableSurface = false;
+                simulator.enableMeshShapeTarget = false;
+                simulator.gravity = 0f;
+                simulator.controllerBody = controllerBody;
+                simulator.splitFraction = 0.5f;
+                simulator.splitSeparation = 5f;
+                simulator.minParticlesToSplit = 16;
+                simulator.Initialise();
+
+                Assert.That(simulator.Split(Vector3.right), Is.True);
+                NativeArray<SlimeParticle> particles =
+                    GetPrivateField<NativeArray<SlimeParticle>>(simulator, "_particles");
+
+                Vector3 oldTarget = simulator.CurrentWorldCenter;
+                int newGroup = simulator.SwitchControl();
+                SlimeGroupManager.GroupBounds(particles, newGroup, out float3 beforeCom, out _, out int count);
+                Assert.That(count, Is.GreaterThan(0));
+
+                SetPrivateField(simulator, "_lastControllerBodyPosition", oldTarget);
+                SetPrivateField(simulator, "_lastControllerBodyGroupId", 0);
+                controllerBody.position = oldTarget;
+                controllerBody.transform.position = oldTarget;
+
+                InvokePrivate(simulator, "SyncControllerBodyTranslation");
+
+                SlimeGroupManager.GroupBounds(particles, newGroup, out float3 afterCom, out _, out _);
+                Assert.That(distance(afterCom, beforeCom), Is.LessThan(0.0001f),
+                    "the first sync after switching control must reset its baseline instead of applying the old target delta");
+            }
+            finally
+            {
+                Object.DestroyImmediate(controllerObject);
+                Object.DestroyImmediate(simulatorObject);
+            }
+        }
+
         static T GetPrivateField<T>(object target, string name)
         {
             FieldInfo field = target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(field, Is.Not.Null);
             return (T)field.GetValue(target);
+        }
+
+        static void SetPrivateField<T>(object target, string name, T value)
+        {
+            FieldInfo field = target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+            field.SetValue(target, value);
+        }
+
+        static void InvokePrivate(object target, string name)
+        {
+            MethodInfo method = target.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null);
+            method.Invoke(target, null);
         }
 
         static void AssertCompactGroupRest(

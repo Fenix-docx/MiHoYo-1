@@ -57,28 +57,12 @@ namespace Slime
 
             target = slimeSimulator.CurrentWorldCenter;
 
-            if (inputEnable && InputManager.Instance != null && InputManager.Instance.inputEnable)
-            {
-                ApplyOrbitInput(
-                    ref cameraAngleX,
-                    ref cameraAngleY,
-                    InputManager.Instance.GetMouseX(),
-                    InputManager.Instance.GetMouseY(),
-                    horizontalRotateSpeed,
-                    verticalRotateSpeed,
-                    minVerticalAngle,
-                    maxVerticalAngle);
-
-                if (enableZoom)
-                    cameraOffset = SetOffsetDistance(
-                        cameraOffset,
-                        CalculateZoomDistance(
-                            cameraOffset.magnitude,
-                            ReadScrollDelta(),
-                            zoomSpeed,
-                            minZoomDistance,
-                            maxZoomDistance));
-            }
+        if (InputManager.Instance != null && InputManager.Instance.inputEnable)
+        {
+            cameraAngleX += InputManager.Instance.GetMouseX() * horizontalRotateSpeed;
+            cameraAngleY += InputManager.Instance.GetMouseY() * verticalRotateSpeed;
+            cameraAngleX = Mathf.Clamp(cameraAngleX, minVerticalAngle, maxVerticalAngle);
+        }
 
             Quaternion rotation = Quaternion.Euler(cameraAngleX, cameraAngleY, 0);
             Vector3 rotatedOffset = rotation * cameraOffset;
@@ -159,16 +143,7 @@ namespace Slime
             return slimeSimulator != null;
         }
 
-        static void ReadMouseDelta(out float mouseX, out float mouseY)
-        {
-#if ENABLE_LEGACY_INPUT_MANAGER
-            mouseX = Input.GetAxis("Mouse X");
-            mouseY = Input.GetAxis("Mouse Y");
-#else
-            mouseX = 0f;
-            mouseY = 0f;
-#endif
-        }
+
 
         static float ReadScrollDelta()
         {
