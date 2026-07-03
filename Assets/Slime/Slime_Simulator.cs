@@ -17,7 +17,7 @@ namespace Slime
         [Header("Simulation")]
         [Range(-20f, 10f)] public float gravity = -5f;
         [Range(0f, 50f)] public float viscosityStrength = 1f;
-        [Range(0.1f, 50f)] public float concentration = 10f;
+        [Range(0.01f, 50f)] public float concentration = 10f;
 
         [Header("Phase 2 – Shape Matching")]
         public bool enableShapeMatch = false;
