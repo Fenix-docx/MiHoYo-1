@@ -809,6 +809,41 @@ namespace Slime.Tests
         }
 
         [Test]
+        public void ControllerGroundSamplingUsesSceneColliderHeight()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject controllerObject = new GameObject("Slime Controller");
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+            try
+            {
+                floor.transform.position = new Vector3(0f, 3.5f, 0f);
+                floor.transform.localScale = new Vector3(8f, 1f, 8f);
+                controllerObject.transform.position = new Vector3(0f, 4.2f, 0f);
+                Physics.SyncTransforms();
+
+                controllerObject.AddComponent<Rigidbody>();
+                SlimeControllerMotor motor = controllerObject.AddComponent<SlimeControllerMotor>();
+                motor.groundY = 0.5f;
+                motor.useSceneGround = true;
+                Physics.SyncTransforms();
+
+                float resolvedGroundY = InvokePrivateValue<float>(
+                    motor,
+                    "ResolveGroundY",
+                    controllerObject.transform.position);
+
+                Assert.That(resolvedGroundY, Is.EqualTo(4.5f).Within(0.001f),
+                    "controller rest height should follow the collider below it, not world Y = 0");
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(controllerObject);
+            }
+        }
+
+        [Test]
         public void DirectMeshShapeTargetDefaultsToControllerTransform()
         {
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -1067,6 +1102,13 @@ namespace Slime.Tests
             MethodInfo method = target.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(method, Is.Not.Null);
             method.Invoke(target, null);
+        }
+
+        static T InvokePrivateValue<T>(object target, string name, params object[] args)
+        {
+            MethodInfo method = target.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null);
+            return (T)method.Invoke(target, args);
         }
 
         static void AssertCompactGroupRest(
