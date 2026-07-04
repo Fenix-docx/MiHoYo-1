@@ -75,7 +75,10 @@ namespace Slime
 
             GameObject blinkTarget = ResolveTarget();
             if (blinkTarget != null)
+            {
                 blinkTarget.SetActive(finalVisible);
+                RefreshTargetTransforms();
+            }
         }
 
         void StartBlink(bool loop)
@@ -106,13 +109,17 @@ namespace Slime
                         yield break;
 
                     blinkTarget.SetActive(!blinkTarget.activeSelf);
+                    RefreshTargetTransforms();
                     yield return WaitForInterval();
                 }
             }
             while (loop);
 
             if (blinkTarget != null)
+            {
                 blinkTarget.SetActive(finalVisible);
+                RefreshTargetTransforms();
+            }
 
             _blinkRoutine = null;
         }

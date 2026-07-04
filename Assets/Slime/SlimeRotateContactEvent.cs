@@ -94,6 +94,7 @@ namespace Slime
             else
                 rotateTarget.rotation = delta * rotateTarget.rotation;
 
+            RefreshTargetTransforms();
             _hasRotated = true;
             _hasTriggered = true;
         }
@@ -108,6 +109,8 @@ namespace Slime
                 rotateTarget.localRotation = _initialLocalRotation;
             else
                 rotateTarget.rotation = _initialWorldRotation;
+
+            RefreshTargetTransforms();
         }
 
         public void ResetRotationState()

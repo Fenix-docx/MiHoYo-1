@@ -139,6 +139,8 @@ namespace Slime
                 else if (hideAllBeforeSequence)
                     target.SetActive(false);
             }
+
+            RefreshTargetTransforms();
         }
 
         void ApplyFinalVisibility()
@@ -155,6 +157,8 @@ namespace Slime
                 if (target != null)
                     target.SetActive(finalVisible);
             }
+
+            RefreshTargetTransforms();
         }
 
         void CaptureInitialVisibility()
@@ -186,6 +190,8 @@ namespace Slime
                 if (target != null)
                     target.SetActive(_initialVisibility[i]);
             }
+
+            RefreshTargetTransforms();
         }
 
         object WaitForInterval()

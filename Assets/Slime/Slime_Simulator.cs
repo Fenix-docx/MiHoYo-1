@@ -348,7 +348,7 @@ namespace Slime
 
             InitRestOffsets();
             _restOffsetsShuffled.CopyFrom(_restOffsets);
-            _renderer?.SetParticles(_particles);
+            RefreshParticleRuntimeViews();
             return count;
         }
 
@@ -394,7 +394,7 @@ namespace Slime
 
             InitRestOffsets();
             _restOffsetsShuffled.CopyFrom(_restOffsets);
-            _renderer?.SetParticles(_particles);
+            RefreshParticleRuntimeViews();
             return count;
         }
 
@@ -476,14 +476,24 @@ namespace Slime
             ResizeNativeArray(ref _hashes, newCount);
             ResizeNativeArray(ref _restOffsets, newCount);
             ResizeNativeArray(ref _restOffsetsShuffled, newCount);
+            ResizeNativeArray(ref _initialRestOffsets, newCount);
+            ResizeNativeArray(ref _initialRestOffsetsShuffled, newCount);
             ResizeNativeArray(ref _shapeRestLocalPositions, newCount);
             ResizeNativeArray(ref _shapeRestLocalPositionsShuffled, newCount);
             ResizeNativeArray(ref _shapeRestMorphFrom, newCount);
             ResizeNativeArray(ref _shapeRestMorphTo, newCount);
+            ResizeNativeArray(ref _shuffledIds, newCount);
 
             if (_lut.IsCreated)
                 _lut.Dispose();
             _lut = new NativeHashMap<int, int2>(newCount, Allocator.Persistent);
+        }
+
+        void RefreshParticleRuntimeViews()
+        {
+            RebuildShapeTargetIfNeeded(force: true);
+            _renderer?.Initialise(_particles.Length);
+            _renderer?.SetParticles(_particles);
         }
 
         static void ResizeNativeArray<T>(ref NativeArray<T> array, int newCount) where T : struct

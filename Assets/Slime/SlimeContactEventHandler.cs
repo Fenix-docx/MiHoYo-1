@@ -52,5 +52,33 @@ namespace Slime
         {
             return triggerMode == SlimeContactEventTriggerMode.Loop;
         }
+
+        protected static Collider[] GetTargetColliders(GameObject target, bool includeChildren)
+        {
+            if (target == null)
+                return System.Array.Empty<Collider>();
+
+            return includeChildren
+                ? target.GetComponentsInChildren<Collider>(true)
+                : target.GetComponents<Collider>();
+        }
+
+        protected static void SetCollidersEnabled(Collider[] colliders, bool enabled)
+        {
+            if (colliders == null)
+                return;
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider targetCollider = colliders[i];
+                if (targetCollider != null)
+                    targetCollider.enabled = enabled;
+            }
+        }
+
+        protected static void RefreshTargetTransforms()
+        {
+            Physics.SyncTransforms();
+        }
     }
 }
