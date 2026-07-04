@@ -11683,10 +11683,11 @@ MonoBehaviour:
   useSlimeSurfaceContact: 1
   includeChildColliders: 1
   contactPadding: 0.05
-  maxSurfaceVertexChecks: 1
+  maxSurfaceVertexChecks: 4096
   usePhysicsCallbacks: 1
   onlyPhysicsContactFromSlime: 1
-  eventHandlers: []
+  eventHandlers:
+  - {fileID: 1836885000}
   onContactBegan:
     m_PersistentCalls:
       m_Calls: []
