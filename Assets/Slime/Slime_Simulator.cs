@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.Serialization;
 using static Unity.Mathematics.math;
 
 namespace Slime
@@ -54,6 +57,27 @@ namespace Slime
         [Min(1)] public int collisionOctreeLeafCapacity = 8;
         [Tooltip("Extra sim-space padding applied to the root octree cube.")]
         [Min(0f)] public float collisionOctreePadding = 1f;
+
+        [Header("Collision Events")]
+        public bool enableCollisionEvents = false;
+        [Range(0f, 50f)] public float minCollisionEventSpeed = 0.5f;
+        [FormerlySerializedAs("onParticleCollision")]
+        public SlimeCollisionUnityEvent onSlimeCollision = new SlimeCollisionUnityEvent();
+        public event Action<SlimeCollisionEventData> OnSlimeCollision;
+
+        [Obsolete("Use onSlimeCollision.")]
+        public SlimeCollisionUnityEvent onParticleCollision => onSlimeCollision;
+
+        [Obsolete("Use OnSlimeCollision.")]
+        public event Action<SlimeCollisionEventData> OnParticleCollision
+        {
+            add => OnSlimeCollision += value;
+            remove => OnSlimeCollision -= value;
+        }
+
+        [Header("Split Events")]
+        public UnityEvent onSlimeSplit = new UnityEvent();
+        public event Action OnSlimeSplit;
 
         [Header("Core-driven locomotion")]
         [Tooltip("Only particles within this sim-space radius of the blob COM receive the controller pull force. 0 = apply to all (legacy).")]
@@ -115,11 +139,15 @@ namespace Slime
         NativeArray<SlimeBoxCollider> _colliderBuffer;
         NativeArray<SlimeColliderOctreeNode> _colliderOctreeNodes;
         NativeArray<int> _colliderOctreeIndices;
+        NativeList<SlimeCollisionEvent> _collisionEvents;
+        NativeParallelHashSet<ulong> _collisionEventSet;
         NativeArray<float3> _groupCentres;   // per-group COM sums (length MaxGroups)
         NativeArray<float3> _groupRestCentres; // per-group canonical rest-offset sums
         NativeArray<int> _groupCounts;       // per-group particle counts (length MaxGroups)
         NativeArray<float> _groupStiffness;  // per-group shape-match stiffness (length MaxGroups)
         NativeArray<int> _shuffledIds;       // particle IDs in cell-grouped (shuffled) order
+        Collider[] _colliderReferences;
+        readonly Dictionary<int, SlimeCollisionEvent> _slimeCollisionEventsByCollider = new Dictionary<int, SlimeCollisionEvent>();
         SlimeGroupManager _groups;
         SlimeControllerMotor _controllerMotor;
         SlimeShapeTarget _shapeTarget;
@@ -142,7 +170,7 @@ namespace Slime
         SlimeSurfaceBuilder _surfaceBuilder;
         SlimeStatusHud _statusHud;
         bool _initialised;
-        bool isQ = true;
+        public bool isSplited = false;
         void Start()
         {
             CurrentWorldCenter = transform.position;
@@ -253,6 +281,7 @@ namespace Slime
             _groupCounts = new NativeArray<int>(SlimeGroupManager.MaxGroups, Allocator.Persistent);
             _groupStiffness = new NativeArray<float>(SlimeGroupManager.MaxGroups, Allocator.Persistent);
             _shuffledIds = new NativeArray<int>(n, Allocator.Persistent);
+            EnsureCollisionEventBuffers(n);
             _groups = new SlimeGroupManager();
             currentstep = Mathf.Clamp(currentstep, 1, 3);
 
@@ -483,10 +512,36 @@ namespace Slime
             ResizeNativeArray(ref _shapeRestMorphFrom, newCount);
             ResizeNativeArray(ref _shapeRestMorphTo, newCount);
             ResizeNativeArray(ref _shuffledIds, newCount);
+            EnsureCollisionEventBuffers(newCount);
 
             if (_lut.IsCreated)
                 _lut.Dispose();
             _lut = new NativeHashMap<int, int2>(newCount, Allocator.Persistent);
+        }
+
+        void EnsureCollisionEventBuffers(int particleCount)
+        {
+            int capacity = Mathf.Max(16, particleCount * 8);
+
+            if (_collisionEvents.IsCreated)
+            {
+                if (_collisionEvents.Capacity < capacity)
+                    _collisionEvents.Capacity = capacity;
+            }
+            else
+            {
+                _collisionEvents = new NativeList<SlimeCollisionEvent>(capacity, Allocator.Persistent);
+            }
+
+            if (_collisionEventSet.IsCreated)
+            {
+                if (_collisionEventSet.Capacity < capacity)
+                    _collisionEventSet.Capacity = capacity;
+            }
+            else
+            {
+                _collisionEventSet = new NativeParallelHashSet<ulong>(capacity, Allocator.Persistent);
+            }
         }
 
         void RefreshParticleRuntimeViews()
@@ -514,9 +569,9 @@ namespace Slime
             where T : UnityEngine.Object
         {
 #if UNITY_6000_4_OR_NEWER
-            return Object.FindObjectsByType<T>(inactive);
+            return UnityEngine.Object.FindObjectsByType<T>(inactive);
 #else
-            return Object.FindObjectsByType<T>(inactive, FindObjectsSortMode.None);
+            return UnityEngine.Object.FindObjectsByType<T>(inactive, FindObjectsSortMode.None);
 #endif
         }
 
@@ -903,6 +958,7 @@ namespace Slime
         {
             DisposeColliderOctree();
             if (_colliderBuffer.IsCreated) _colliderBuffer.Dispose();
+            _colliderReferences = null;
 
             Collider[] colliders =
                 FindSceneObjects<Collider>(FindObjectsInactive.Exclude);
@@ -924,6 +980,7 @@ namespace Slime
             }
 
             _colliderBuffer = new NativeArray<SlimeBoxCollider>(count, Allocator.Persistent);
+            Collider[] colliderReferences = new Collider[count];
 
             int writeIndex = 0;
             for (int i = 0; i < colliders.Length; i++)
@@ -939,7 +996,11 @@ namespace Slime
                     continue;
 
                 if (TryBuildBoxCollider(col, out SlimeBoxCollider slimeCollider))
-                    _colliderBuffer[writeIndex++] = slimeCollider;
+                {
+                    _colliderBuffer[writeIndex] = slimeCollider;
+                    colliderReferences[writeIndex] = col;
+                    writeIndex++;
+                }
             }
 
             if (writeIndex != count)
@@ -949,8 +1010,10 @@ namespace Slime
                     compact[i] = _colliderBuffer[i];
                 _colliderBuffer.Dispose();
                 _colliderBuffer = compact;
+                Array.Resize(ref colliderReferences, writeIndex);
                 count = writeIndex;
             }
+            _colliderReferences = colliderReferences;
 
             BuildColliderOctree();
 
@@ -1568,6 +1631,15 @@ namespace Slime
             }
 
             // 8. Update: floor + collider push-out + velocity reconstruction + clamp
+            bool recordCollisionEvents = enableCollisionEvents
+                && _collisionEvents.IsCreated
+                && _collisionEventSet.IsCreated;
+            if (recordCollisionEvents)
+            {
+                _collisionEvents.Clear();
+                _collisionEventSet.Clear();
+            }
+
             new SlimeSimulation.UpdateJob
             {
                 Ps = _particles,
@@ -1582,7 +1654,14 @@ namespace Slime
                     && _colliderOctreeNodes.Length > 0
                     && _colliderOctreeIndices.IsCreated,
                 FloorY = 1f,
+                RecordCollisionEvents = recordCollisionEvents,
+                CollisionEvents = _collisionEvents.AsParallelWriter(),
+                CollisionEventSet = _collisionEventSet.AsParallelWriter(),
+                MinCollisionEventSpeed = minCollisionEventSpeed,
             }.Schedule(_particles.Length, _batchCount).Complete();
+
+            if (recordCollisionEvents)
+                DispatchCollisionEvents();
 
             // 9. Viscosity
             new SlimeSimulation.ApplyViscosityJob
@@ -1624,6 +1703,8 @@ namespace Slime
             if (_shapeRestMorphFrom.IsCreated) _shapeRestMorphFrom.Dispose();
             if (_shapeRestMorphTo.IsCreated) _shapeRestMorphTo.Dispose();
             if (_colliderBuffer.IsCreated) _colliderBuffer.Dispose();
+            if (_collisionEvents.IsCreated) _collisionEvents.Dispose();
+            if (_collisionEventSet.IsCreated) _collisionEventSet.Dispose();
             DisposeColliderOctree();
             if (_groupCentres.IsCreated) _groupCentres.Dispose();
             if (_groupRestCentres.IsCreated) _groupRestCentres.Dispose();
@@ -1635,6 +1716,8 @@ namespace Slime
             _activeShapeTargetMesh = null;
             _activeShapeTargetTransform = null;
             _activeShapeSdfResolution = 0;
+            _colliderReferences = null;
+            _slimeCollisionEventsByCollider.Clear();
             _shapeRestMorphActive = false;
             _shapeLocalCenter = new float3(0f, 0f, 0f);
             _hasLastTransformPosition = false;
@@ -1643,6 +1726,51 @@ namespace Slime
             _initialised = false;
         }
         #endregion  
+
+        void DispatchCollisionEvents()
+        {
+            if (!_collisionEvents.IsCreated || _collisionEvents.Length == 0)
+                return;
+
+            _slimeCollisionEventsByCollider.Clear();
+            for (int i = 0; i < _collisionEvents.Length; i++)
+            {
+                SlimeCollisionEvent simEvent = _collisionEvents[i];
+                if (!_slimeCollisionEventsByCollider.TryGetValue(simEvent.ColliderIndex, out SlimeCollisionEvent current) ||
+                    IsStrongerWholeSlimeCollision(simEvent, current))
+                    _slimeCollisionEventsByCollider[simEvent.ColliderIndex] = simEvent;
+            }
+
+            foreach (KeyValuePair<int, SlimeCollisionEvent> pair in _slimeCollisionEventsByCollider)
+            {
+                SlimeCollisionEvent simEvent = pair.Value;
+                SlimeCollisionEventData eventData =
+                    SlimeCollisionEventData.FromSim(simEvent, ResolveCollisionEventCollider(pair.Key));
+
+                OnSlimeCollision?.Invoke(eventData);
+                onSlimeCollision?.Invoke(eventData);
+            }
+        }
+
+        static bool IsStrongerWholeSlimeCollision(SlimeCollisionEvent candidate, SlimeCollisionEvent current)
+        {
+            if (candidate.ImpactSpeed > current.ImpactSpeed)
+                return true;
+
+            if (candidate.ImpactSpeed < current.ImpactSpeed)
+                return false;
+
+            return candidate.PenetrationDepth > current.PenetrationDepth;
+        }
+
+        Collider ResolveCollisionEventCollider(int colliderIndex)
+        {
+            if (_colliderReferences == null || (uint)colliderIndex >= (uint)_colliderReferences.Length)
+                return null;
+
+            return _colliderReferences[colliderIndex];
+        }
+
         void OnDrawGizmos()
         {
             if (!Application.isPlaying || !_particles.IsCreated)
@@ -1849,7 +1977,15 @@ namespace Slime
             // Brief absorb cooldown so the separation has time to take effect
             // before contact-detection can re-merge the bodies.
             _absorbCooldown = absorbCooldownTime;
+            isSplited = true;
+            DispatchSlimeSplit();
             return true;
+        }
+
+        void DispatchSlimeSplit()
+        {
+            OnSlimeSplit?.Invoke();
+            onSlimeSplit?.Invoke();
         }
 
         /// <summary>Cycle motor control to the next alive body.</summary>

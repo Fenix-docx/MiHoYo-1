@@ -40,6 +40,21 @@ namespace Slime
     }
 
     /// <summary>
+    /// Burst-friendly particle-vs-scene-collider collision event.
+    /// Positions, distances, and speeds are in simulation space.
+    /// </summary>
+    public struct SlimeCollisionEvent
+    {
+        public int ParticleIndex;
+        public int ColliderIndex;
+        public float3 ContactPoint;
+        public float3 ContactNormal;
+        public float PenetrationDepth;
+        public float ImpactSpeed;
+        public byte CollisionType; // 0 = discrete push-out, 1 = CCD segment hit
+    }
+
+    /// <summary>
     /// Native-friendly octree node used as a broad phase for static slime
     /// collision. Bounds are axis-aligned cubes in simulation space.
     /// </summary>

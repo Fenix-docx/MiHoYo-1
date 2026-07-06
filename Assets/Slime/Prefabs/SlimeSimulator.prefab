@@ -50,7 +50,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Slime.SlimeSimulator
   gravity: -10
   viscosityStrength: 12.7
-  concentration: 4.1
+  concentration: 4
+  initialParticleCount: 2048
   enableShapeMatch: 1
   shapeStiffness: 0.1
   enableMeshShapeTarget: 1
@@ -66,6 +67,18 @@ MonoBehaviour:
   isoLevel: 1
   controllerBody: {fileID: 0}
   velocityFollowGain: 0.5
+  useCollisionOctree: 1
+  collisionOctreeMaxDepth: 6
+  collisionOctreeLeafCapacity: 8
+  collisionOctreePadding: 1
+  enableCollisionEvents: 0
+  minCollisionEventSpeed: 0.5
+  onSlimeCollision:
+    m_PersistentCalls:
+      m_Calls: []
+  onSlimeSplit:
+    m_PersistentCalls:
+      m_Calls: []
   moveCoreRadius: 1.5
   splitFraction: 0.25
   splitSeparation: 5
@@ -80,7 +93,9 @@ MonoBehaviour:
   concentrationStep: 4
   stiffnessStep: 0.1
   currentstep: 1
+  showRuntimeHud: 1
   simulateOnStart: 1
+  isSplited: 0
 --- !u!114 &1512871399343351758
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -110,7 +125,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5514364605200473637}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -164,4 +179,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89dea9e7989ace54fa6ecd0632b4d056, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Slime.SlimeSurfaceBuilder
-  surfaceMaterial: {fileID: 7433849927704936601, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
+  surfaceMaterial: {fileID: 2100000, guid: f982a5175fa0471cb48aae81f8f2d0e4, type: 2}

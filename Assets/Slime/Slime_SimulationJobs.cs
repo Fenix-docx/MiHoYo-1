@@ -389,6 +389,10 @@ namespace Slime
             public bool EnableFloor;
             public bool UseColliderOctree;
             public float FloorY;
+            public bool RecordCollisionEvents;
+            public NativeList<SlimeCollisionEvent>.ParallelWriter CollisionEvents;
+            public NativeParallelHashSet<ulong>.ParallelWriter CollisionEventSet;
+            public float MinCollisionEventSpeed;
 
             public void Execute(int i)
             {
@@ -412,9 +416,9 @@ namespace Slime
                         && ColliderOctreeNodes.IsCreated
                         && ColliderOctreeNodes.Length > 0
                         && ColliderOctreeIndices.IsCreated)
-                        ResolveCollisionsOctree(ref p, oldPos);
+                        ResolveCollisionsOctree(ref p, oldPos, i, pass);
                     else
-                        ResolveCollisionsFull(ref p, oldPos);
+                        ResolveCollisionsFull(ref p, oldPos, i, pass);
                 }
 
                 float3 vel = (p.Position - PosOld[i]) / SlimeConst.DeltaTime;
@@ -425,16 +429,16 @@ namespace Slime
                 Ps[i] = p;
             }
 
-            void ResolveCollisionsFull(ref SlimeParticle particle, float3 oldPos)
+            void ResolveCollisionsFull(ref SlimeParticle particle, float3 oldPos, int particleIndex, int pass)
             {
                 if (!Colliders.IsCreated)
                     return;
 
                 for (int c = 0; c < Colliders.Length; c++)
-                    ResolveColliderIndex(ref particle, oldPos, c);
+                    ResolveColliderIndex(ref particle, oldPos, c, particleIndex, pass);
             }
 
-            void ResolveCollisionsOctree(ref SlimeParticle particle, float3 oldPos)
+            void ResolveCollisionsOctree(ref SlimeParticle particle, float3 oldPos, int particleIndex, int pass)
             {
                 float3 queryMin = min(oldPos, particle.Position) - new float3(0.01f);
                 float3 queryMax = max(oldPos, particle.Position) + new float3(0.01f);
@@ -460,7 +464,7 @@ namespace Slime
                         if ((uint)indexOffset >= (uint)ColliderOctreeIndices.Length)
                             continue;
 
-                        ResolveColliderIndex(ref particle, oldPos, ColliderOctreeIndices[indexOffset]);
+                        ResolveColliderIndex(ref particle, oldPos, ColliderOctreeIndices[indexOffset], particleIndex, pass);
                     }
 
                     if (node.FirstChild < 0)
@@ -477,7 +481,7 @@ namespace Slime
 
                         if (stack.Length >= stack.Capacity)
                         {
-                            ResolveCollisionsFull(ref particle, oldPos);
+                            ResolveCollisionsFull(ref particle, oldPos, particleIndex, pass);
                             return;
                         }
 
@@ -486,21 +490,75 @@ namespace Slime
                 }
             }
 
-            void ResolveColliderIndex(ref SlimeParticle particle, float3 oldPos, int colliderIndex)
+            void ResolveColliderIndex(ref SlimeParticle particle, float3 oldPos, int colliderIndex, int particleIndex, int pass)
             {
                 if (!Colliders.IsCreated || (uint)colliderIndex >= (uint)Colliders.Length)
                     return;
 
                 SlimeBoxCollider box = Colliders[colliderIndex];
-                ResolveAgainstCollider(ref particle, oldPos, box);
+                ResolveAgainstCollider(ref particle, oldPos, box, out SlimeCollisionResult result);
+                if (RecordCollisionEvents && pass == 0 && result.Hit)
+                    TryRecordCollisionEvent(particleIndex, colliderIndex, box, result);
             }
 
-            static void ResolveAgainstCollider(ref SlimeParticle particle, float3 oldPos, SlimeBoxCollider box)
+            void TryRecordCollisionEvent(
+                int particleIndex,
+                int colliderIndex,
+                SlimeBoxCollider box,
+                SlimeCollisionResult result)
+            {
+                if (result.ImpactSpeed < max(0f, MinCollisionEventSpeed))
+                    return;
+
+                ulong key = CollisionEventKey(particleIndex, colliderIndex);
+                if (!CollisionEventSet.Add(key))
+                    return;
+
+                CollisionEvents.AddNoResize(ComputeCollisionEvent(particleIndex, colliderIndex, box, result));
+            }
+
+            static SlimeCollisionEvent ComputeCollisionEvent(
+                int particleIndex,
+                int colliderIndex,
+                SlimeBoxCollider box,
+                SlimeCollisionResult result)
             {
                 float3 axisX = SafeAxis(box.AxisX, new float3(1f, 0f, 0f));
                 float3 axisY = SafeAxis(box.AxisY, new float3(0f, 1f, 0f));
                 float3 axisZ = SafeAxis(box.AxisZ, new float3(0f, 0f, 1f));
+                float3 normal = normalizesafe(
+                    ObbLocalVectorToWorld(result.NormalLocal, axisX, axisY, axisZ),
+                    new float3(0f, 1f, 0f));
+
+                return new SlimeCollisionEvent
+                {
+                    ParticleIndex = particleIndex,
+                    ColliderIndex = colliderIndex,
+                    ContactPoint = ObbLocalToWorld(result.ContactPointLocal, box.Center, axisX, axisY, axisZ),
+                    ContactNormal = normal,
+                    PenetrationDepth = max(0f, result.PenetrationDepth),
+                    ImpactSpeed = max(0f, result.ImpactSpeed),
+                    CollisionType = result.CollisionType,
+                };
+            }
+
+            static ulong CollisionEventKey(int particleIndex, int colliderIndex)
+            {
+                return ((ulong)(uint)particleIndex << 32) | (uint)colliderIndex;
+            }
+
+            static void ResolveAgainstCollider(
+                ref SlimeParticle particle,
+                float3 oldPos,
+                SlimeBoxCollider box,
+                out SlimeCollisionResult result)
+            {
+                result = default;
+                float3 axisX = SafeAxis(box.AxisX, new float3(1f, 0f, 0f));
+                float3 axisY = SafeAxis(box.AxisY, new float3(0f, 1f, 0f));
+                float3 axisZ = SafeAxis(box.AxisZ, new float3(0f, 0f, 1f));
                 float3 extent = max(box.Extent, new float3(0.0001f));
+                float3 preResolvePosition = particle.Position;
 
                 // Discrete check: particle is currently inside the OBB.
                 float3 local = WorldToObbLocal(particle.Position, box.Center, axisX, axisY, axisZ);
@@ -513,8 +571,24 @@ namespace Slime
                     if (remain.y < remain[axis]) axis = 1;
                     if (remain.z < remain[axis]) axis = 2;
 
-                    local[axis] = FaceSign(local[axis]) * extent[axis];
-                    particle.Position = ObbLocalToWorld(local, box.Center, axisX, axisY, axisZ);
+                    float sign = FaceSign(local[axis]);
+                    float3 normalLocal = AxisNormalLocal(axis, sign);
+                    float3 contactLocal = local;
+                    contactLocal[axis] = sign * extent[axis];
+                    float3 normal = normalizesafe(
+                        ObbLocalVectorToWorld(normalLocal, axisX, axisY, axisZ),
+                        new float3(0f, 1f, 0f));
+
+                    result = new SlimeCollisionResult
+                    {
+                        Hit = true,
+                        ContactPointLocal = contactLocal,
+                        NormalLocal = normalLocal,
+                        PenetrationDepth = remain[axis],
+                        ImpactSpeed = ComputeImpactSpeed(oldPos, preResolvePosition, normal),
+                        CollisionType = 0,
+                    };
+                    particle.Position = ObbLocalToWorld(contactLocal, box.Center, axisX, axisY, axisZ);
                     return;
                 }
 
@@ -539,9 +613,52 @@ namespace Slime
                 if (tEntry <= tExit && tEntry >= 0f && tEntry < dist)
                 {
                     // Hit: push particle just before entry point.
+                    int axis = 0;
+                    if (tNear.y > tNear[axis]) axis = 1;
+                    if (tNear.z > tNear[axis]) axis = 2;
+
+                    float3 normalLocal = AxisNormalLocal(axis, -FaceSign(dir[axis]));
+                    float3 contactLocal = localOld + dir * tEntry;
                     float3 localHit = localOld + dir * max(0f, tEntry - 1e-3f);
+                    float3 normal = normalizesafe(
+                        ObbLocalVectorToWorld(normalLocal, axisX, axisY, axisZ),
+                        new float3(0f, 1f, 0f));
+
+                    result = new SlimeCollisionResult
+                    {
+                        Hit = true,
+                        ContactPointLocal = contactLocal,
+                        NormalLocal = normalLocal,
+                        PenetrationDepth = max(0f, dist - tEntry),
+                        ImpactSpeed = ComputeImpactSpeed(oldPos, preResolvePosition, normal),
+                        CollisionType = 1,
+                    };
                     particle.Position = ObbLocalToWorld(localHit, box.Center, axisX, axisY, axisZ);
                 }
+            }
+
+            struct SlimeCollisionResult
+            {
+                public bool Hit;
+                public float3 ContactPointLocal;
+                public float3 NormalLocal;
+                public float PenetrationDepth;
+                public float ImpactSpeed;
+                public byte CollisionType;
+            }
+
+            static float3 AxisNormalLocal(int axis, float sign)
+            {
+                float3 normal = new float3(0f, 0f, 0f);
+                normal[axis] = sign;
+                return normal;
+            }
+
+            static float ComputeImpactSpeed(float3 oldPos, float3 currentPos, float3 normal)
+            {
+                float3 velocity = (currentPos - oldPos) / SlimeConst.DeltaTime;
+                float speed = -dot(velocity, normalizesafe(normal, new float3(0f, 1f, 0f)));
+                return IsFinite(speed) ? max(0f, speed) : 0f;
             }
 
             static bool IsFinite(float value)
@@ -585,6 +702,11 @@ namespace Slime
         static float3 ObbLocalToWorld(float3 local, float3 center, float3 axisX, float3 axisY, float3 axisZ)
         {
             return center + axisX * local.x + axisY * local.y + axisZ * local.z;
+        }
+
+        static float3 ObbLocalVectorToWorld(float3 local, float3 axisX, float3 axisY, float3 axisZ)
+        {
+            return axisX * local.x + axisY * local.y + axisZ * local.z;
         }
 
         // ── 8. XSPH viscosity ──
