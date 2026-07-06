@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -18,6 +19,7 @@ namespace Slime
         [Range(-20f, 10f)] public float gravity = -5f;
         [Range(0f, 50f)] public float viscosityStrength = 1f;
         [Range(0.01f, 50f)] public float concentration = 10f;
+        [Min(16)] public int initialParticleCount = SlimeConst.Num;
 
         [Header("Phase 2 – Shape Matching")]
         public bool enableShapeMatch = false;
@@ -42,6 +44,16 @@ namespace Slime
         [Tooltip("Velocity source the slime follows (e.g. a SlimeControllerMotor's Rigidbody). Auto-found if left empty.")]
         public Rigidbody controllerBody;
         [Range(0f, 1f)] public float velocityFollowGain = 0.5f;
+
+        [Header("Collision Broad Phase")]
+        [Tooltip("Build an octree over static scene colliders so each particle checks only nearby obstacle candidates.")]
+        public bool useCollisionOctree = true;
+        [Tooltip("Maximum octree subdivision depth for static obstacle broad-phase queries.")]
+        [Range(1, 8)] public int collisionOctreeMaxDepth = 6;
+        [Tooltip("Maximum collider count kept in a leaf before subdivision.")]
+        [Min(1)] public int collisionOctreeLeafCapacity = 8;
+        [Tooltip("Extra sim-space padding applied to the root octree cube.")]
+        [Min(0f)] public float collisionOctreePadding = 1f;
 
         [Header("Core-driven locomotion")]
         [Tooltip("Only particles within this sim-space radius of the blob COM receive the controller pull force. 0 = apply to all (legacy).")]
@@ -101,6 +113,8 @@ namespace Slime
         NativeArray<float3> _shapeRestMorphFrom;
         NativeArray<float3> _shapeRestMorphTo;
         NativeArray<SlimeBoxCollider> _colliderBuffer;
+        NativeArray<SlimeColliderOctreeNode> _colliderOctreeNodes;
+        NativeArray<int> _colliderOctreeIndices;
         NativeArray<float3> _groupCentres;   // per-group COM sums (length MaxGroups)
         NativeArray<float3> _groupRestCentres; // per-group canonical rest-offset sums
         NativeArray<int> _groupCounts;       // per-group particle counts (length MaxGroups)
@@ -215,7 +229,7 @@ namespace Slime
         {
             Dispose();
 
-            int n = SlimeConst.Num;
+            int n = Mathf.Max(16, initialParticleCount);
             _particles = new NativeArray<SlimeParticle>(n, Allocator.Persistent);
             _particlesTemp = new NativeArray<SlimeParticle>(n, Allocator.Persistent);
             _posPredict = new NativeArray<float3>(n, Allocator.Persistent);
@@ -334,7 +348,7 @@ namespace Slime
 
             InitRestOffsets();
             _restOffsetsShuffled.CopyFrom(_restOffsets);
-            _renderer?.SetParticles(_particles);
+            RefreshParticleRuntimeViews();
             return count;
         }
 
@@ -380,7 +394,7 @@ namespace Slime
 
             InitRestOffsets();
             _restOffsetsShuffled.CopyFrom(_restOffsets);
-            _renderer?.SetParticles(_particles);
+            RefreshParticleRuntimeViews();
             return count;
         }
 
@@ -462,14 +476,24 @@ namespace Slime
             ResizeNativeArray(ref _hashes, newCount);
             ResizeNativeArray(ref _restOffsets, newCount);
             ResizeNativeArray(ref _restOffsetsShuffled, newCount);
+            ResizeNativeArray(ref _initialRestOffsets, newCount);
+            ResizeNativeArray(ref _initialRestOffsetsShuffled, newCount);
             ResizeNativeArray(ref _shapeRestLocalPositions, newCount);
             ResizeNativeArray(ref _shapeRestLocalPositionsShuffled, newCount);
             ResizeNativeArray(ref _shapeRestMorphFrom, newCount);
             ResizeNativeArray(ref _shapeRestMorphTo, newCount);
+            ResizeNativeArray(ref _shuffledIds, newCount);
 
             if (_lut.IsCreated)
                 _lut.Dispose();
             _lut = new NativeHashMap<int, int2>(newCount, Allocator.Persistent);
+        }
+
+        void RefreshParticleRuntimeViews()
+        {
+            RebuildShapeTargetIfNeeded(force: true);
+            _renderer?.Initialise(_particles.Length);
+            _renderer?.SetParticles(_particles);
         }
 
         static void ResizeNativeArray<T>(ref NativeArray<T> array, int newCount) where T : struct
@@ -486,6 +510,16 @@ namespace Slime
         #endregion  
         #region Scene references
 
+        static T[] FindSceneObjects<T>(FindObjectsInactive inactive)
+            where T : UnityEngine.Object
+        {
+#if UNITY_6000_4_OR_NEWER
+            return Object.FindObjectsByType<T>(inactive);
+#else
+            return Object.FindObjectsByType<T>(inactive, FindObjectsSortMode.None);
+#endif
+        }
+
         Rigidbody ResolveControllerBody()
         {
             SlimeControllerMotor childMotor = GetComponentInChildren<SlimeControllerMotor>();
@@ -500,7 +534,7 @@ namespace Slime
                 return childRigidbody;
 
             SlimeControllerMotor[] sceneMotors =
-                Object.FindObjectsByType<SlimeControllerMotor>(FindObjectsInactive.Exclude);
+                FindSceneObjects<SlimeControllerMotor>(FindObjectsInactive.Exclude);
             if (sceneMotors.Length == 1 && sceneMotors[0].TryGetComponent(out Rigidbody sceneBody))
             {
                 _controllerMotor = sceneMotors[0];
@@ -536,7 +570,7 @@ namespace Slime
                 return childMotor;
 
             SlimeControllerMotor[] sceneMotors =
-                Object.FindObjectsByType<SlimeControllerMotor>(FindObjectsInactive.Exclude);
+                FindSceneObjects<SlimeControllerMotor>(FindObjectsInactive.Exclude);
             return sceneMotors.Length == 1 ? sceneMotors[0] : null;
         }
 
@@ -799,8 +833,7 @@ namespace Slime
 
                 if (resetVelocity)
                 {
-                    controllerBody.linearVelocity = Vector3.zero;
-                    controllerBody.angularVelocity = Vector3.zero;
+                    ResetRigidbodyVelocity(controllerBody);
                     _controllerMotor?.ResetMotion();
                 }
 
@@ -868,9 +901,11 @@ namespace Slime
         /// </summary>
         public void RebuildColliders()
         {
+            DisposeColliderOctree();
             if (_colliderBuffer.IsCreated) _colliderBuffer.Dispose();
 
-            Collider[] colliders = Object.FindObjectsOfType<Collider>(false);
+            Collider[] colliders =
+                FindSceneObjects<Collider>(FindObjectsInactive.Exclude);
 
             int count = 0;
             for (int i = 0; i < colliders.Length; i++)
@@ -917,7 +952,257 @@ namespace Slime
                 count = writeIndex;
             }
 
-            Debug.Log($"[SlimeSimulator] RebuildColliders: {count} static obstacle collider(s) collected (skipped {colliders.Length - count} with Rigidbody / trigger / disabled / other-scene).");
+            BuildColliderOctree();
+
+            int octreeNodeCount = _colliderOctreeNodes.IsCreated ? _colliderOctreeNodes.Length : 0;
+            Debug.Log($"[SlimeSimulator] RebuildColliders: {count} static obstacle collider(s) collected (skipped {colliders.Length - count} with Rigidbody / trigger / disabled / other-scene). Octree nodes: {octreeNodeCount}.");
+        }
+
+        void BuildColliderOctree()
+        {
+            DisposeColliderOctree();
+
+            if (!useCollisionOctree || !_colliderBuffer.IsCreated || _colliderBuffer.Length == 0)
+                return;
+
+            int colliderCount = _colliderBuffer.Length;
+            float3[] boundsMin = new float3[colliderCount];
+            float3[] boundsMax = new float3[colliderCount];
+
+            float3 totalMin = new float3(float.MaxValue);
+            float3 totalMax = new float3(float.MinValue);
+            List<int> allColliders = new List<int>(colliderCount);
+
+            for (int i = 0; i < colliderCount; i++)
+            {
+                SlimeBoxCollider collider = _colliderBuffer[i];
+                GetColliderAabb(collider, out float3 minBounds, out float3 maxBounds);
+
+                if (!IsFinite(minBounds) || !IsFinite(maxBounds))
+                    continue;
+
+                boundsMin[i] = minBounds;
+                boundsMax[i] = maxBounds;
+                totalMin = min(totalMin, minBounds);
+                totalMax = max(totalMax, maxBounds);
+                allColliders.Add(i);
+            }
+
+            if (allColliders.Count == 0)
+                return;
+
+            float3 rootCenter = (totalMin + totalMax) * 0.5f;
+            float3 rootSize = max(totalMax - totalMin, new float3(0.001f));
+            float rootHalfSize = max(cmax(rootSize) * 0.5f + max(0f, collisionOctreePadding), 0.5f);
+
+            List<SlimeColliderOctreeNode> nodes = new List<SlimeColliderOctreeNode>(max(1, colliderCount));
+            List<int> indices = new List<int>(colliderCount);
+            nodes.Add(default);
+
+            BuildColliderOctreeNode(
+                0,
+                allColliders,
+                rootCenter,
+                rootHalfSize,
+                0,
+                max(1, collisionOctreeMaxDepth),
+                max(1, collisionOctreeLeafCapacity),
+                boundsMin,
+                boundsMax,
+                nodes,
+                indices);
+
+            _colliderOctreeNodes = new NativeArray<SlimeColliderOctreeNode>(nodes.Count, Allocator.Persistent);
+            for (int i = 0; i < nodes.Count; i++)
+                _colliderOctreeNodes[i] = nodes[i];
+
+            _colliderOctreeIndices = new NativeArray<int>(indices.Count, Allocator.Persistent);
+            for (int i = 0; i < indices.Count; i++)
+                _colliderOctreeIndices[i] = indices[i];
+        }
+
+        static void BuildColliderOctreeNode(
+            int nodeIndex,
+            List<int> colliderIndices,
+            float3 center,
+            float halfSize,
+            int depth,
+            int maxDepth,
+            int leafCapacity,
+            float3[] boundsMin,
+            float3[] boundsMax,
+            List<SlimeColliderOctreeNode> nodes,
+            List<int> outIndices)
+        {
+            int firstCollider = outIndices.Count;
+            int colliderCount = colliderIndices.Count;
+            int firstChild = -1;
+
+            if (colliderIndices.Count > leafCapacity && depth < maxDepth)
+            {
+                float childHalfSize = halfSize * 0.5f;
+                List<int> localColliders = new List<int>();
+                List<int>[] childColliders = new List<int>[8];
+
+                for (int i = 0; i < colliderIndices.Count; i++)
+                {
+                    int colliderIndex = colliderIndices[i];
+                    int childIndex = GetContainingOctreeChild(
+                        boundsMin[colliderIndex],
+                        boundsMax[colliderIndex],
+                        center);
+
+                    if (childIndex < 0)
+                    {
+                        localColliders.Add(colliderIndex);
+                        continue;
+                    }
+
+                    childColliders[childIndex] ??= new List<int>();
+                    childColliders[childIndex].Add(colliderIndex);
+                }
+
+                bool hasChildColliders = false;
+                for (int i = 0; i < childColliders.Length; i++)
+                {
+                    if (childColliders[i] != null && childColliders[i].Count > 0)
+                    {
+                        hasChildColliders = true;
+                        break;
+                    }
+                }
+
+                if (hasChildColliders)
+                {
+                    firstCollider = outIndices.Count;
+                    for (int i = 0; i < localColliders.Count; i++)
+                        outIndices.Add(localColliders[i]);
+
+                    colliderCount = localColliders.Count;
+                    firstChild = nodes.Count;
+                    for (int i = 0; i < 8; i++)
+                        nodes.Add(default);
+
+                    for (int child = 0; child < 8; child++)
+                    {
+                        List<int> childList = childColliders[child] ?? s_EmptyColliderIndexList;
+                        BuildColliderOctreeNode(
+                            firstChild + child,
+                            childList,
+                            GetOctreeChildCenter(center, childHalfSize, child),
+                            childHalfSize,
+                            depth + 1,
+                            maxDepth,
+                            leafCapacity,
+                            boundsMin,
+                            boundsMax,
+                            nodes,
+                            outIndices);
+                    }
+
+                    nodes[nodeIndex] = new SlimeColliderOctreeNode
+                    {
+                        Center = center,
+                        HalfSize = halfSize,
+                        FirstChild = firstChild,
+                        FirstCollider = firstCollider,
+                        ColliderCount = colliderCount,
+                    };
+                    return;
+                }
+            }
+
+            firstCollider = outIndices.Count;
+            for (int i = 0; i < colliderIndices.Count; i++)
+                outIndices.Add(colliderIndices[i]);
+
+            nodes[nodeIndex] = new SlimeColliderOctreeNode
+            {
+                Center = center,
+                HalfSize = halfSize,
+                FirstChild = -1,
+                FirstCollider = firstCollider,
+                ColliderCount = colliderIndices.Count,
+            };
+        }
+
+        static readonly List<int> s_EmptyColliderIndexList = new List<int>(0);
+
+        static void GetColliderAabb(SlimeBoxCollider collider, out float3 minBounds, out float3 maxBounds)
+        {
+            float3 axisX = normalizesafe(collider.AxisX, new float3(1f, 0f, 0f));
+            float3 axisY = normalizesafe(collider.AxisY, new float3(0f, 1f, 0f));
+            float3 axisZ = normalizesafe(collider.AxisZ, new float3(0f, 0f, 1f));
+            float3 extent = max(collider.Extent, new float3(0f));
+            float3 aabbHalf =
+                abs(axisX) * extent.x +
+                abs(axisY) * extent.y +
+                abs(axisZ) * extent.z;
+
+            minBounds = collider.Center - aabbHalf;
+            maxBounds = collider.Center + aabbHalf;
+        }
+
+        static int GetContainingOctreeChild(float3 minBounds, float3 maxBounds, float3 parentCenter)
+        {
+            int child = 0;
+
+            if (maxBounds.x <= parentCenter.x)
+            {
+                child |= 0;
+            }
+            else if (minBounds.x >= parentCenter.x)
+            {
+                child |= 1;
+            }
+            else
+            {
+                return -1;
+            }
+
+            if (maxBounds.y <= parentCenter.y)
+            {
+                child |= 0;
+            }
+            else if (minBounds.y >= parentCenter.y)
+            {
+                child |= 2;
+            }
+            else
+            {
+                return -1;
+            }
+
+            if (maxBounds.z <= parentCenter.z)
+            {
+                child |= 0;
+            }
+            else if (minBounds.z >= parentCenter.z)
+            {
+                child |= 4;
+            }
+            else
+            {
+                return -1;
+            }
+
+            return child;
+        }
+
+        static float3 GetOctreeChildCenter(float3 parentCenter, float childHalfSize, int child)
+        {
+            return parentCenter + new float3(
+                (child & 1) == 0 ? -childHalfSize : childHalfSize,
+                (child & 2) == 0 ? -childHalfSize : childHalfSize,
+                (child & 4) == 0 ? -childHalfSize : childHalfSize);
+        }
+
+        void DisposeColliderOctree()
+        {
+            if (_colliderOctreeNodes.IsCreated)
+                _colliderOctreeNodes.Dispose();
+            if (_colliderOctreeIndices.IsCreated)
+                _colliderOctreeIndices.Dispose();
         }
 
         static bool TryBuildBoxCollider(Collider col, out SlimeBoxCollider slimeCollider)
@@ -1288,8 +1573,14 @@ namespace Slime
                 Ps = _particles,
                 PosOld = _posOld,
                 Colliders = _colliderBuffer,
+                ColliderOctreeNodes = _colliderOctreeNodes,
+                ColliderOctreeIndices = _colliderOctreeIndices,
                 Velocity = _velocityTempBuffer,
                 EnableFloor = !_colliderBuffer.IsCreated || _colliderBuffer.Length == 0,
+                UseColliderOctree = useCollisionOctree
+                    && _colliderOctreeNodes.IsCreated
+                    && _colliderOctreeNodes.Length > 0
+                    && _colliderOctreeIndices.IsCreated,
                 FloorY = 1f,
             }.Schedule(_particles.Length, _batchCount).Complete();
 
@@ -1333,6 +1624,7 @@ namespace Slime
             if (_shapeRestMorphFrom.IsCreated) _shapeRestMorphFrom.Dispose();
             if (_shapeRestMorphTo.IsCreated) _shapeRestMorphTo.Dispose();
             if (_colliderBuffer.IsCreated) _colliderBuffer.Dispose();
+            DisposeColliderOctree();
             if (_groupCentres.IsCreated) _groupCentres.Dispose();
             if (_groupRestCentres.IsCreated) _groupRestCentres.Dispose();
             if (_groupCounts.IsCreated) _groupCounts.Dispose();
@@ -1584,11 +1876,19 @@ namespace Slime
                     _lastControllerBodyPosition = controllerBody.position;
                     _hasLastControllerBodyPosition = true;
                     _lastControllerBodyGroupId = newId;
-                    if (controllerBody is Rigidbody rb)
-                        rb.linearVelocity = Vector3.zero;
+                    ResetRigidbodyVelocity(controllerBody);
                 }
             }
             return newId;
+        }
+
+        static void ResetRigidbodyVelocity(Rigidbody body)
+        {
+            if (body == null || body.isKinematic)
+                return;
+
+            body.linearVelocity = Vector3.zero;
+            body.angularVelocity = Vector3.zero;
         }
 
         void EnsureStatusHud()

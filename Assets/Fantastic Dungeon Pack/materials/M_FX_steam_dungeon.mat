@@ -27,6 +27,7 @@ Material:
     RenderType: Transparent
   disabledShaderPasses:
   - SHADOWCASTER
+  - GRABPASS
   - DepthOnly
   - MOTIONVECTORS
   m_LockedProperties: 

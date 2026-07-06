@@ -73,6 +73,7 @@ namespace Slime.Tests
                 simulator.Initialise();
 
                 SetPrivateField(motor, "<CommandedVelocity>k__BackingField", new Vector3(2f, 0f, -1f));
+                controllerBody.isKinematic = false;
                 controllerBody.linearVelocity = new Vector3(2f, 3f, 4f);
                 controllerBody.angularVelocity = new Vector3(0.5f, 1f, 1.5f);
 

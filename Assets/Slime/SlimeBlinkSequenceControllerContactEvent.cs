@@ -20,9 +20,11 @@ namespace Slime
         [SerializeField] bool hideAllBeforeSequence = true;
         [SerializeField] bool restoreInitialVisibilityAfterSequence = false;
         [SerializeField] bool finalVisible = true;
-        [SerializeField] bool loopWhileContact = false;
-        [SerializeField] bool triggerOnce = false;
         [SerializeField] bool useUnscaledTime = false;
+        [SerializeField] SlimeContactEventTriggerMode triggerMode = SlimeContactEventTriggerMode.RepeatableStart;
+        [SerializeField, HideInInspector] bool loopWhileContact = false;
+        [SerializeField, HideInInspector] bool triggerOnce = false;
+        [SerializeField, HideInInspector] bool triggerModeMigrated;
 
         Coroutine _sequenceRoutine;
         bool[] _initialVisibility = Array.Empty<bool>();
@@ -35,18 +37,27 @@ namespace Slime
 
         void Awake()
         {
+            MigrateLegacyTriggerMode();
             CaptureInitialVisibility();
         }
 
         void OnValidate()
         {
+            MigrateLegacyTriggerMode();
             stepInterval = Mathf.Max(0.01f, stepInterval);
             cycles = Mathf.Max(1, cycles);
         }
 
+        void OnDisable()
+        {
+            StopSequence();
+        }
+
         public override void HandleContactBegan(SlimeContactEventContext context)
         {
-            if (triggerOnce && _hasTriggered)
+            MigrateLegacyTriggerMode();
+
+            if (!CanStartContactEvent(triggerMode, _hasTriggered))
                 return;
 
             StartSequence();
@@ -54,7 +65,7 @@ namespace Slime
 
         public override void HandleContactEnded(SlimeContactEventContext context)
         {
-            if (!loopWhileContact)
+            if (!ShouldLoopContactEvent(triggerMode))
                 return;
 
             StopSequence();
@@ -63,6 +74,8 @@ namespace Slime
 
         public void StartSequence()
         {
+            MigrateLegacyTriggerMode();
+
             if (blinkTargets == null || blinkTargets.Length == 0)
                 return;
 
@@ -93,9 +106,11 @@ namespace Slime
 
         IEnumerator SequenceRoutine()
         {
+            bool loop = ShouldLoopContactEvent(triggerMode);
+
             do
             {
-                int repeatCount = loopWhileContact ? int.MaxValue : cycles;
+                int repeatCount = loop ? int.MaxValue : cycles;
                 for (int cycle = 0; cycle < repeatCount; cycle++)
                 {
                     for (int i = 0; i < blinkTargets.Length; i++)
@@ -105,7 +120,7 @@ namespace Slime
                     }
                 }
             }
-            while (loopWhileContact);
+            while (loop);
 
             ApplyFinalVisibility();
             _sequenceRoutine = null;
@@ -124,6 +139,8 @@ namespace Slime
                 else if (hideAllBeforeSequence)
                     target.SetActive(false);
             }
+
+            RefreshTargetTransforms();
         }
 
         void ApplyFinalVisibility()
@@ -140,6 +157,8 @@ namespace Slime
                 if (target != null)
                     target.SetActive(finalVisible);
             }
+
+            RefreshTargetTransforms();
         }
 
         void CaptureInitialVisibility()
@@ -171,6 +190,8 @@ namespace Slime
                 if (target != null)
                     target.SetActive(_initialVisibility[i]);
             }
+
+            RefreshTargetTransforms();
         }
 
         object WaitForInterval()
@@ -187,6 +208,21 @@ namespace Slime
                 return null;
 
             return blinkTargets[index] != null ? blinkTargets[index].target : null;
+        }
+
+        void MigrateLegacyTriggerMode()
+        {
+            if (triggerModeMigrated)
+                return;
+
+            if (loopWhileContact)
+                triggerMode = SlimeContactEventTriggerMode.Loop;
+            else
+                triggerMode = triggerOnce
+                    ? SlimeContactEventTriggerMode.Once
+                    : SlimeContactEventTriggerMode.RepeatableStart;
+
+            triggerModeMigrated = true;
         }
     }
 }
