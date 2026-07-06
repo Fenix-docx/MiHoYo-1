@@ -46,7 +46,7 @@ Material:
     - _BumpScale: 0.94
     - _FresnelBias: 0.21
     - _FresnelPower: 4
-    - _Opacity: 0.41
+    - _Opacity: 0.8
     - _ReflectionStrength: 0.44
     - _RefractionStrength: 0.072
     - _Roughness: 0.21
@@ -57,9 +57,9 @@ Material:
     - _SSRThickness: 0.44
     - _SSRToSkyBlend: 0.25
     - _SkyReflectionStrength: 0.45
-    - _Thickness: 0.89
+    - _Thickness: 1.991
     m_Colors:
-    - _BaseColor: {r: 0.8459119, g: 0.9717867, b: 1, a: 0.34}
-    - _TransmissionColor: {r: 0.68, g: 0.9, b: 1, a: 1}
+    - _BaseColor: {r: 0.5352636, g: 0.7978952, b: 0.8553459, a: 0.6313726}
+    - _TransmissionColor: {r: 0.44806367, g: 0.63936585, b: 0.72327036, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -172,7 +172,7 @@ namespace Slime
 
         void ChangeControlledCohesion(float concentrationDelta, float stiffnessDelta, int stepDelta)
         {
-            concentration = Mathf.Clamp(concentration + concentrationDelta, 0.1f, 12f);
+            concentration = Mathf.Clamp(concentration + concentrationDelta, 0.01f, 12f);
             shapeStiffness = Mathf.Clamp(shapeStiffness + stiffnessDelta, 0f, 0.2f);
             currentstep = Mathf.Clamp(currentstep + stepDelta, 1, 3);
             StoreControlledCohesionState();
