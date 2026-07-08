@@ -47,6 +47,7 @@ namespace Slime
             public AsyncGPUReadbackRequest Stats;
             public int FrameIssued;
             public int VertexCapacity;
+            public bool Discarded;
         }
 
         public SlimeGpuSurfacePipeline(ComputeShader computeShader)
@@ -65,7 +66,13 @@ namespace Slime
 
         public void DiscardPendingReadbacks()
         {
-            _pendingReadbacks.Clear();
+            int count = _pendingReadbacks.Count;
+            for (int i = 0; i < count; i++)
+            {
+                PendingReadback pending = _pendingReadbacks.Dequeue();
+                pending.Discarded = true;
+                _pendingReadbacks.Enqueue(pending);
+            }
         }
 
         public bool TrySchedule(
@@ -132,63 +139,74 @@ namespace Slime
 
         public bool TryApplyCompletedReadback(Mesh mesh)
         {
-            if (mesh == null || _pendingReadbacks.Count == 0)
+            if (_pendingReadbacks.Count == 0)
                 return false;
 
-            PendingReadback pending = _pendingReadbacks.Peek();
-            if (!pending.Vertices.done || !pending.Stats.done)
-                return false;
-
-            _pendingReadbacks.Dequeue();
-            LastReadbackLatencyFrames = Mathf.Max(0, Time.frameCount - pending.FrameIssued);
-
-            if (pending.Vertices.hasError || pending.Stats.hasError)
+            while (_pendingReadbacks.Count > 0)
             {
-                LastVertexCount = 0;
-                LastOverflow = false;
-                LastVisitedBlockCount = 0;
-                LastSkippedBlockCount = 0;
-                return false;
-            }
+                PendingReadback pending = _pendingReadbacks.Peek();
+                if (!pending.Vertices.done || !pending.Stats.done)
+                    return false;
 
-            NativeArray<uint> stats = pending.Stats.GetData<uint>();
-            LastVisitedBlockCount = stats.Length > 0 ? ClampToInt(stats[0]) : 0;
-            LastSkippedBlockCount = stats.Length > 1 ? ClampToInt(stats[1]) : 0;
-            LastOverflow = stats.Length > 2 && stats[2] != 0;
+                if (!pending.Discarded && mesh == null)
+                    return false;
 
-            int vertexCount = stats.Length > 3 ? ClampToInt(stats[3]) : 0;
-            vertexCount = Mathf.Clamp(vertexCount, 0, pending.VertexCapacity);
-            LastVertexCount = vertexCount;
+                _pendingReadbacks.Dequeue();
+                LastReadbackLatencyFrames = Mathf.Max(0, Time.frameCount - pending.FrameIssued);
 
-            if (vertexCount == 0)
-            {
-                mesh.Clear();
+                if (pending.Discarded)
+                    continue;
+
+                if (pending.Vertices.hasError || pending.Stats.hasError)
+                {
+                    LastVertexCount = 0;
+                    LastOverflow = false;
+                    LastVisitedBlockCount = 0;
+                    LastSkippedBlockCount = 0;
+                    return false;
+                }
+
+                NativeArray<uint> stats = pending.Stats.GetData<uint>();
+                LastVisitedBlockCount = stats.Length > 0 ? ClampToInt(stats[0]) : 0;
+                LastSkippedBlockCount = stats.Length > 1 ? ClampToInt(stats[1]) : 0;
+                LastOverflow = stats.Length > 2 && stats[2] != 0;
+
+                int vertexCount = stats.Length > 3 ? ClampToInt(stats[3]) : 0;
+                vertexCount = Mathf.Clamp(vertexCount, 0, pending.VertexCapacity);
+                LastVertexCount = vertexCount;
+
+                if (vertexCount == 0)
+                {
+                    mesh.Clear();
+                    return true;
+                }
+
+                NativeArray<SurfaceVertexGpu> vertices = pending.Vertices.GetData<SurfaceVertexGpu>();
+                vertexCount = Mathf.Min(vertexCount, vertices.Length);
+                LastVertexCount = vertexCount;
+
+                EnsureReadbackArrays(vertexCount);
+                for (int i = 0; i < vertexCount; i++)
+                {
+                    SurfaceVertexGpu vertex = vertices[i];
+                    _positions[i] = new Vector3(vertex.Position.x, vertex.Position.y, vertex.Position.z);
+                    _normals[i] = new Vector3(vertex.Normal.x, vertex.Normal.y, vertex.Normal.z);
+                }
+
+                mesh.SetVertexBufferParams(vertexCount,
+                    new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, stream: 0),
+                    new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3, stream: 1));
+                mesh.SetIndexBufferParams(vertexCount, IndexFormat.UInt32);
+                mesh.SetVertexBufferData(_positions, 0, 0, vertexCount, stream: 0);
+                mesh.SetVertexBufferData(_normals, 0, 0, vertexCount, stream: 1);
+                mesh.SetIndexBufferData(_meshIndices, 0, 0, vertexCount);
+                mesh.subMeshCount = 1;
+                mesh.SetSubMesh(0, new SubMeshDescriptor(0, vertexCount, MeshTopology.Triangles));
+                mesh.RecalculateBounds();
                 return true;
             }
 
-            NativeArray<SurfaceVertexGpu> vertices = pending.Vertices.GetData<SurfaceVertexGpu>();
-            vertexCount = Mathf.Min(vertexCount, vertices.Length);
-            LastVertexCount = vertexCount;
-
-            EnsureReadbackArrays(vertexCount);
-            for (int i = 0; i < vertexCount; i++)
-            {
-                SurfaceVertexGpu vertex = vertices[i];
-                _positions[i] = new Vector3(vertex.Position.x, vertex.Position.y, vertex.Position.z);
-                _normals[i] = new Vector3(vertex.Normal.x, vertex.Normal.y, vertex.Normal.z);
-            }
-
-            mesh.SetVertexBufferParams(vertexCount,
-                new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, stream: 0),
-                new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3, stream: 1));
-            mesh.SetIndexBufferParams(vertexCount, IndexFormat.UInt32);
-            mesh.SetVertexBufferData(_positions, 0, 0, vertexCount, stream: 0);
-            mesh.SetVertexBufferData(_normals, 0, 0, vertexCount, stream: 1);
-            mesh.SetIndexBufferData(_meshIndices, 0, 0, vertexCount);
-            mesh.subMeshCount = 1;
-            mesh.SetSubMesh(0, new SubMeshDescriptor(0, vertexCount, MeshTopology.Triangles));
-            mesh.RecalculateBounds();
-            return true;
+            return false;
         }
 
         void BindCommon(int kernel, int particleCount, int keyCount, float3 minPos, float isoLevel)
@@ -271,9 +289,20 @@ namespace Slime
             EnsureBuffer(ref _statsBuffer, ref _statsCapacity, 4, 4, ComputeBufferType.Structured);
         }
 
+        void WaitForPendingReadbacks()
+        {
+            while (_pendingReadbacks.Count > 0)
+            {
+                PendingReadback pending = _pendingReadbacks.Dequeue();
+                pending.Vertices.WaitForCompletion();
+                pending.Stats.WaitForCompletion();
+            }
+        }
+
         public void Dispose()
         {
             DiscardPendingReadbacks();
+            WaitForPendingReadbacks();
             _positions = Array.Empty<Vector3>();
             _normals = Array.Empty<Vector3>();
             _meshIndices = Array.Empty<int>();
