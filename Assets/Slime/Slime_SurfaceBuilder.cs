@@ -31,12 +31,17 @@ namespace Slime
         Mesh _mesh;
         MeshFilter _mf;
         MeshRenderer _mr;
+        int _autoOverflowFallbackFramesRemaining;
 
         public Mesh CurrentSurfaceMesh => _mesh;
         public bool HasSurface => _mesh != null && _mesh.vertexCount > 0;
         public int LastMarchingCubeBlockCount { get; private set; }
         public int LastSkippedMarchingCubeBlockCount { get; private set; }
         public SlimeSurfaceBuildMode SurfaceBuildMode => surfaceBuildMode;
+        public bool LastGpuSurfaceSupported => _gpuPipeline != null && _gpuPipeline.IsSupported;
+        public bool LastGpuSurfaceOverflow => _gpuPipeline != null && _gpuPipeline.LastOverflow;
+        public int LastGpuSurfaceVertexCount => _gpuPipeline != null ? _gpuPipeline.LastVertexCount : 0;
+        public int LastGpuReadbackLatencyFrames => _gpuPipeline != null ? _gpuPipeline.LastReadbackLatencyFrames : 0;
 
         void Awake()
         {
@@ -62,6 +67,8 @@ namespace Slime
         {
             if (surfaceBuildMode == SlimeSurfaceBuildMode.Cpu)
             {
+                DiscardPendingGpuReadbacks();
+                _autoOverflowFallbackFramesRemaining = 0;
                 BuildSurfaceCpu(particles, isoLevel);
                 return;
             }
@@ -70,6 +77,9 @@ namespace Slime
             {
                 LastMarchingCubeBlockCount = _gpuPipeline.LastVisitedBlockCount;
                 LastSkippedMarchingCubeBlockCount = _gpuPipeline.LastSkippedBlockCount;
+
+                if (surfaceBuildMode == SlimeSurfaceBuildMode.Auto)
+                    _autoOverflowFallbackFramesRemaining = _gpuPipeline.LastOverflow ? 1 : 0;
             }
 
             NativeArray<int3> keys;
@@ -78,6 +88,8 @@ namespace Slime
             {
                 LastMarchingCubeBlockCount = 0;
                 LastSkippedMarchingCubeBlockCount = 0;
+                DiscardPendingGpuReadbacks();
+                _autoOverflowFallbackFramesRemaining = 0;
                 _mesh.Clear();
                 keys.Dispose();
                 return;
@@ -85,15 +97,44 @@ namespace Slime
 
             try
             {
-                bool scheduledGpu = TryBuildSurfaceGpuAsync(particles, keys, minPos, isoLevel);
+                bool scheduledGpu = ShouldUseGpuThisFrame() &&
+                                    TryBuildSurfaceGpuAsync(particles, keys, minPos, isoLevel);
 
                 if (!scheduledGpu)
+                {
                     BuildSurfaceCpuPrepared(particles, keys, minPos, isoLevel);
+                    DiscardPendingGpuReadbacks();
+
+                    if (surfaceBuildMode == SlimeSurfaceBuildMode.Auto &&
+                        _autoOverflowFallbackFramesRemaining > 0)
+                        _autoOverflowFallbackFramesRemaining--;
+                }
             }
             finally
             {
                 keys.Dispose();
             }
+        }
+
+        bool ShouldUseGpuThisFrame()
+        {
+            if (_gpuPipeline == null || !_gpuPipeline.IsSupported)
+                return false;
+
+            switch (surfaceBuildMode)
+            {
+                case SlimeSurfaceBuildMode.GpuAsyncReadback:
+                    return true;
+                case SlimeSurfaceBuildMode.Auto:
+                    return _autoOverflowFallbackFramesRemaining <= 0;
+                default:
+                    return false;
+            }
+        }
+
+        void DiscardPendingGpuReadbacks()
+        {
+            _gpuPipeline?.DiscardPendingReadbacks();
         }
 
         bool TryBuildSurfaceGpuAsync(
@@ -139,6 +180,7 @@ namespace Slime
             {
                 LastMarchingCubeBlockCount = 0;
                 LastSkippedMarchingCubeBlockCount = 0;
+                DiscardPendingGpuReadbacks();
                 keys.Dispose();
                 _mesh.Clear();
                 return;

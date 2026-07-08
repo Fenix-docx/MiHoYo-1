@@ -63,6 +63,11 @@ namespace Slime
         public int LastVisitedBlockCount { get; private set; }
         public int LastSkippedBlockCount { get; private set; }
 
+        public void DiscardPendingReadbacks()
+        {
+            _pendingReadbacks.Clear();
+        }
+
         public bool TrySchedule(
             NativeArray<SlimeParticle> particles,
             NativeArray<int3> keys,
@@ -268,7 +273,7 @@ namespace Slime
 
         public void Dispose()
         {
-            _pendingReadbacks.Clear();
+            DiscardPendingReadbacks();
             _positions = Array.Empty<Vector3>();
             _normals = Array.Empty<Vector3>();
             _meshIndices = Array.Empty<int>();

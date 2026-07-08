@@ -717,7 +717,27 @@ Pass 3: GenerateTriangles(IJobParallelFor) 并行写顶点/索引
 
 这样可以避免 `NativeList` 多线程写入冲突，并把最重的查表与生成过程并行化。
 
-### 4.3 复杂 Mesh 形状目标
+### 4.3 GPU 表面重建模式
+
+`SlimeSurfaceBuilder` 支持 CPU 和 GPU async-readback 两种表面重建模式。GPU 路径仍然让
+CPU 侧模拟保持权威，只把粒子和稀疏 block 元数据上传到 compute shader，在 GPU 上重建表面，
+再通过异步读回把紧凑顶点写回现有 CPU `Mesh`。
+
+这样可以保留依赖 `CurrentSurfaceMesh` 的玩法脚本，包括表面接触开关，但代价是通常会有
+1-3 帧读回延迟。玩法代码中应避免同步调用 `ComputeBuffer.GetData()`；它会阻塞主线程，
+抵消这次迁移的性能收益。
+
+模式行为：
+
+- `Cpu`：始终使用 CPU 稀疏密度场和 Marching Cubes。
+- `GpuAsyncReadback`：GPU 支持且调度成功时提交异步重建；不支持或调度失败时，本帧回退到 CPU。
+- `Auto`：GPU 支持时优先提交异步重建；若某次 GPU 结果发生 overflow，本帧使用 CPU 覆盖一次，
+  然后在后续符合条件的帧继续重试 GPU。
+
+GPU 读回尚未完成时，`SlimeSurfaceBuilder` 会继续保留上一帧有效 Mesh，不会因为暂时没有新的
+GPU 结果而清空表面。若稀疏数据准备阶段没有任何活跃 block，则说明当前没有表面，清空 Mesh 仍然是正确行为。
+
+### 4.4 复杂 Mesh 形状目标
 
 当前 `Slime_ShapeTarget.cs` 的主要限制：
 
@@ -745,7 +765,7 @@ Pass 3: GenerateTriangles(IJobParallelFor) 并行写顶点/索引
 | `Assets/Slime/Slime_CohesionJobs.cs` | 113 | 质心计算、平移形状匹配。 |
 | `Assets/Slime/Slime_DensityField.cs` | 169 | 稀疏密度场、粒子投影、网格模糊。 |
 | `Assets/Slime/Slime_MarchingCubes.cs` | 521 | Marching Cubes 查表、顶点插值、法线计算。 |
-| `Assets/Slime/Slime_SurfaceBuilder.cs` | 157 | 密度场到 Mesh 的调度与绘制。 |
+| `Assets/Slime/Slime_SurfaceBuilder.cs` | 266 | 密度场到 Mesh 的调度与绘制。 |
 | `Assets/Slime/Slime_Simulator.cs` | 1628 | MonoBehaviour 主入口、初始化、调度、控制、同步、分裂吸收。 |
 | `Assets/Slime/Slime_ControllerMotor.cs` | 150 | WASD/Shift/Space 控制器电机。 |
 | `Assets/Slime/SlimeGroupManager.cs` | 458 | 显式 ID 分组、分裂、吸收、控制切换。 |
