@@ -107,41 +107,20 @@ namespace Slime
             if (slimeSurface == null || !slimeSurface.HasSurface)
                 return false;
 
-            Mesh surfaceMesh = slimeSurface.CurrentSurfaceMesh;
-            if (surfaceMesh == null || surfaceMesh.vertexCount == 0)
-                return false;
-
             if (_targetColliders == null || _targetColliders.Length == 0)
                 CacheTargetColliders();
 
-            if (_targetColliders == null || _targetColliders.Length == 0)
+            if (!SlimeSurfaceContactUtility.TryGetSurfaceContact(
+                slimeSurface,
+                _targetColliders,
+                _surfaceVertices,
+                maxSurfaceVertexChecks,
+                contactPadding,
+                out Vector3 foundPoint))
                 return false;
 
-            _surfaceVertices.Clear();
-            surfaceMesh.GetVertices(_surfaceVertices);
-            if (_surfaceVertices.Count == 0)
-                return false;
-
-            float padding = Mathf.Max(contactPadding, 0.0001f);
-            Bounds slimeBounds = surfaceMesh.bounds;
-            slimeBounds.Expand(padding * 2f);
-
-            for (int i = 0; i < _targetColliders.Length; i++)
-            {
-                Collider targetCollider = _targetColliders[i];
-                if (!IsUsable(targetCollider))
-                    continue;
-
-                Bounds targetBounds = targetCollider.bounds;
-                targetBounds.Expand(padding * 2f);
-                if (!targetBounds.Intersects(slimeBounds))
-                    continue;
-
-                if (SurfaceTouchesCollider(targetCollider, targetBounds, padding, out contactPoint))
-                    return true;
-            }
-
-            return false;
+            contactPoint = foundPoint;
+            return true;
         }
 
         public void ResetTriggerState()
@@ -150,35 +129,11 @@ namespace Slime
             _lastTriggerTime = float.NegativeInfinity;
         }
 
-        bool SurfaceTouchesCollider(Collider targetCollider, Bounds targetBounds, float padding, out Vector3 contactPoint)
-        {
-            contactPoint = transform.position;
-            float sqrPadding = padding * padding;
-            int stride = Mathf.Max(1, Mathf.CeilToInt(_surfaceVertices.Count / (float)maxSurfaceVertexChecks));
-
-            for (int i = 0; i < _surfaceVertices.Count; i += stride)
-            {
-                Vector3 point = _surfaceVertices[i];
-                if (!IsFinite(point))
-                    continue;
-
-                if (targetBounds.SqrDistance(point) > sqrPadding)
-                    continue;
-
-                Vector3 closest = targetCollider.ClosestPoint(point);
-                if ((closest - point).sqrMagnitude <= sqrPadding)
-                {
-                    contactPoint = point;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         bool TryAddParticles()
         {
-            audioSource.PlayOneShot(audioClip);
+            if (audioSource != null && audioClip != null)
+                audioSource.PlayOneShot(audioClip);
+
             if (!CanTrigger() || !ResolveSlimeSimulator())
                 return false;
 
@@ -267,29 +222,7 @@ namespace Slime
 
         static bool IsSlimeObject(Component component)
         {
-            if (component == null)
-                return false;
-
-            return component.GetComponentInParent<SlimeSimulator>() != null ||
-                   component.GetComponentInParent<SlimeSurfaceBuilder>() != null ||
-                   component.GetComponentInParent<SlimeControllerMotor>() != null;
-        }
-
-        static bool IsUsable(Collider targetCollider)
-        {
-            return targetCollider != null &&
-                   targetCollider.enabled &&
-                   targetCollider.gameObject.activeInHierarchy;
-        }
-
-        static bool IsFinite(Vector3 value)
-        {
-            return IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
-        }
-
-        static bool IsFinite(float value)
-        {
-            return !float.IsNaN(value) && !float.IsInfinity(value);
+            return SlimeSurfaceContactUtility.IsSlimeObject(component);
         }
     }
 }

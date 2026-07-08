@@ -57,28 +57,31 @@ namespace Slime
             float padding = Mathf.Max(MinContactPadding, contactPadding);
             float paddingSqr = padding * padding;
             int maxChecks = Mathf.Max(1, maxVertexChecks);
-            int step = Mathf.Max(1, Mathf.CeilToInt(surfaceVertices.Count / (float)maxChecks));
+            int stride = Mathf.Max(1, Mathf.CeilToInt(surfaceVertices.Count / (float)maxChecks));
+            int checks = 0;
             Bounds surfaceBounds = surfaceMesh.bounds;
             surfaceBounds.Expand(padding * 2f);
 
-            for (int colliderIndex = 0; colliderIndex < colliders.Length; colliderIndex++)
+            for (int vertexIndex = 0;
+                 vertexIndex < surfaceVertices.Count && checks < maxChecks;
+                 vertexIndex += stride)
             {
-                Collider targetCollider = colliders[colliderIndex];
-                if (!IsUsable(targetCollider))
+                Vector3 point = surfaceVertices[vertexIndex];
+                if (!IsFinite(point))
                     continue;
 
-                Bounds targetBounds = targetCollider.bounds;
-                targetBounds.Expand(padding * 2f);
+                checks++;
 
-                if (!targetBounds.Intersects(surfaceBounds))
-                    continue;
-
-                for (int vertexIndex = 0, checks = 0;
-                     vertexIndex < surfaceVertices.Count && checks < maxChecks;
-                     vertexIndex += step, checks++)
+                for (int colliderIndex = 0; colliderIndex < colliders.Length; colliderIndex++)
                 {
-                    Vector3 point = surfaceVertices[vertexIndex];
-                    if (!IsFinite(point))
+                    Collider targetCollider = colliders[colliderIndex];
+                    if (!IsUsable(targetCollider))
+                        continue;
+
+                    Bounds targetBounds = targetCollider.bounds;
+                    targetBounds.Expand(padding * 2f);
+
+                    if (!targetBounds.Intersects(surfaceBounds))
                         continue;
 
                     if (targetBounds.SqrDistance(point) > paddingSqr)

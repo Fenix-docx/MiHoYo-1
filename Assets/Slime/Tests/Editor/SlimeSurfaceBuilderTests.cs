@@ -162,6 +162,92 @@ namespace Slime.Tests
         }
 
         [Test]
+        public void SurfaceContactUtilityCapsVertexChecksAcrossColliders()
+        {
+            GameObject missObject = new GameObject("surface contact budget miss");
+            GameObject hitObject = new GameObject("surface contact budget hit");
+            Mesh mesh = new Mesh { name = "budget contact mesh" };
+            var vertices = new System.Collections.Generic.List<Vector3>(16);
+
+            try
+            {
+                BoxCollider missBox = missObject.AddComponent<BoxCollider>();
+                missBox.center = Vector3.right;
+                missBox.size = Vector3.one * 0.1f;
+
+                BoxCollider hitBox = hitObject.AddComponent<BoxCollider>();
+                hitBox.center = Vector3.zero;
+                hitBox.size = Vector3.one * 0.1f;
+
+                mesh.vertices = new[]
+                {
+                    Vector3.zero,
+                    Vector3.right,
+                    Vector3.up,
+                };
+                mesh.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Triangles, 0);
+                mesh.RecalculateBounds();
+
+                bool touched = SlimeSurfaceContactUtility.TryGetMeshContact(
+                    mesh,
+                    new Collider[] { missBox, hitBox },
+                    vertices,
+                    maxVertexChecks: 1,
+                    contactPadding: 0.01f,
+                    out Vector3 contactPoint);
+
+                Assert.That(touched, Is.True);
+                Assert.That(Vector3.Distance(contactPoint, Vector3.zero), Is.LessThan(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(missObject);
+                Object.DestroyImmediate(hitObject);
+            }
+        }
+
+        [Test]
+        public void SurfaceContactUtilityTreatsNonPositiveVertexChecksAsOne()
+        {
+            GameObject colliderObject = new GameObject("surface contact nonpositive budget");
+            Mesh mesh = new Mesh { name = "nonpositive budget contact mesh" };
+            var vertices = new System.Collections.Generic.List<Vector3>(16);
+
+            try
+            {
+                BoxCollider box = colliderObject.AddComponent<BoxCollider>();
+                box.center = Vector3.zero;
+                box.size = Vector3.one * 0.25f;
+
+                mesh.vertices = new[]
+                {
+                    Vector3.zero,
+                    Vector3.right,
+                    Vector3.up,
+                };
+                mesh.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Triangles, 0);
+                mesh.RecalculateBounds();
+
+                bool touched = SlimeSurfaceContactUtility.TryGetMeshContact(
+                    mesh,
+                    new Collider[] { box },
+                    vertices,
+                    maxVertexChecks: 0,
+                    contactPadding: 0.05f,
+                    out Vector3 contactPoint);
+
+                Assert.That(touched, Is.True);
+                Assert.That(Vector3.Distance(contactPoint, Vector3.zero), Is.LessThan(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(colliderObject);
+            }
+        }
+
+        [Test]
         public void SurfaceContactUtilityIgnoresFarCollider()
         {
             GameObject colliderObject = new GameObject("far surface contact target");
@@ -197,6 +283,29 @@ namespace Slime.Tests
             {
                 Object.DestroyImmediate(mesh);
                 Object.DestroyImmediate(colliderObject);
+            }
+        }
+
+        [Test]
+        public void SurfaceContactUtilityRecognizesSlimeComponents()
+        {
+            GameObject slimeObject = new GameObject("slime object");
+            GameObject plainObject = new GameObject("plain object");
+
+            try
+            {
+                SlimeSimulator simulator = slimeObject.AddComponent<SlimeSimulator>();
+                BoxCollider slimeCollider = slimeObject.AddComponent<BoxCollider>();
+                BoxCollider plainCollider = plainObject.AddComponent<BoxCollider>();
+
+                Assert.That(SlimeSurfaceContactUtility.IsSlimeObject(slimeCollider), Is.True);
+                Assert.That(SlimeSurfaceContactUtility.IsSlimeObject(simulator), Is.True);
+                Assert.That(SlimeSurfaceContactUtility.IsSlimeObject(plainCollider), Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(slimeObject);
+                Object.DestroyImmediate(plainObject);
             }
         }
 

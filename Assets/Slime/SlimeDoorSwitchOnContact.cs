@@ -170,19 +170,10 @@ namespace Slime
 
         bool IsAcceptedPhysicsContact(Collider other)
         {
-            if (other == null || !other.enabled || !other.gameObject.activeInHierarchy)
+            if (!SlimeSurfaceContactUtility.IsUsable(other))
                 return false;
 
-            if (!onlyPhysicsContactFromSlime)
-                return true;
-
-            if (other.GetComponentInParent<SlimeSimulator>() != null)
-                return true;
-
-            if (other.GetComponentInParent<SlimeControllerMotor>() != null)
-                return true;
-
-            return false;
+            return !onlyPhysicsContactFromSlime || SlimeSurfaceContactUtility.IsSlimeObject(other);
         }
 
         bool IsSlimeSurfaceTouchingSwitch()
@@ -193,34 +184,13 @@ namespace Slime
             if (_contactColliders == null || _contactColliders.Length == 0)
                 RefreshContactColliders();
 
-            Mesh surfaceMesh = slimeSurface.CurrentSurfaceMesh;
-            if (surfaceMesh == null || surfaceMesh.vertexCount == 0)
-                return false;
-
-            _surfaceVertices.Clear();
-            surfaceMesh.GetVertices(_surfaceVertices);
-
-            if (_surfaceVertices.Count == 0)
-                return false;
-
-            int step = Mathf.Max(1, Mathf.CeilToInt(_surfaceVertices.Count / (float)maxSurfaceVertexChecks));
-            float paddingSqr = contactPadding * contactPadding;
-
-            for (int vertexIndex = 0, checks = 0;
-                 vertexIndex < _surfaceVertices.Count && checks < maxSurfaceVertexChecks;
-                 vertexIndex += step, checks++)
-            {
-                Vector3 worldPoint = _surfaceVertices[vertexIndex];
-
-                for (int colliderIndex = 0; colliderIndex < _contactColliders.Length; colliderIndex++)
-                {
-                    Collider contactCollider = _contactColliders[colliderIndex];
-                    if (IsPointTouchingCollider(worldPoint, contactCollider, paddingSqr))
-                        return true;
-                }
-            }
-
-            return false;
+            return SlimeSurfaceContactUtility.TryGetSurfaceContact(
+                slimeSurface,
+                _contactColliders,
+                _surfaceVertices,
+                maxSurfaceVertexChecks,
+                contactPadding,
+                out _);
         }
 
         bool ResolveSlimeSurface()
@@ -238,18 +208,6 @@ namespace Slime
                 slimeSimulator = slimeSurface.GetComponentInParent<SlimeSimulator>();
 
             return slimeSurface != null;
-        }
-
-        bool IsPointTouchingCollider(Vector3 worldPoint, Collider contactCollider, float paddingSqr)
-        {
-            if (contactCollider == null || !contactCollider.enabled || !contactCollider.gameObject.activeInHierarchy)
-                return false;
-
-            if (contactPadding > 0f && contactCollider.bounds.SqrDistance(worldPoint) > paddingSqr)
-                return false;
-
-            Vector3 closestPoint = contactCollider.ClosestPoint(worldPoint);
-            return (closestPoint - worldPoint).sqrMagnitude <= paddingSqr;
         }
 
         void SetContactState(bool hasContact)
