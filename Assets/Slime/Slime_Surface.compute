@@ -1,0 +1,103 @@
+#pragma kernel ClearDensity
+#pragma kernel ProjectDensity
+#pragma kernel BlurDensity
+#pragma kernel MarchingCubes
+
+struct SlimeParticleGpu
+{
+    float3 Position;
+    int ID;
+};
+
+struct SurfaceVertexGpu
+{
+    float3 Position;
+    float3 Normal;
+};
+
+StructuredBuffer<SlimeParticleGpu> _Particles;
+StructuredBuffer<int3> _Keys;
+RWStructuredBuffer<float> _DensityRead;
+RWStructuredBuffer<float> _DensityWrite;
+AppendStructuredBuffer<SurfaceVertexGpu> _Vertices;
+RWStructuredBuffer<uint> _Stats;
+
+int _ParticleCount;
+int _KeyCount;
+float3 _MinPos;
+float _IsoLevel;
+float _CellSize;
+float _H2;
+float _Poly6Norm;
+float _Scale;
+
+int LocalIndex(int3 c)
+{
+    return (c.x & 3) + 4 * ((c.y & 3) + 4 * (c.z & 3));
+}
+
+float Poly6(float r2)
+{
+    if (r2 >= _H2)
+        return 0.0;
+
+    float v = _H2 - r2;
+    return v * v * v * _Poly6Norm;
+}
+
+[numthreads(64, 1, 1)]
+void ClearDensity(uint3 id : SV_DispatchThreadID)
+{
+    uint index = id.x;
+    uint count = (uint)(_KeyCount * 64);
+    if (index >= count)
+        return;
+
+    _DensityRead[index] = 0.0;
+    _DensityWrite[index] = 0.0;
+}
+
+[numthreads(64, 1, 1)]
+void ProjectDensity(uint3 id : SV_DispatchThreadID)
+{
+    uint cellIndex = id.x;
+    uint cellCount = (uint)(_KeyCount * 64);
+    if (cellIndex >= cellCount)
+        return;
+
+    uint keyIndex = cellIndex / 64;
+    uint local = cellIndex - keyIndex * 64;
+    int3 localCoord = int3(local & 3, (local >> 2) & 3, (local >> 4) & 3);
+    int3 coord = _Keys[keyIndex] * 4 + localCoord;
+    float3 cellPos = (0.5 + (float3)coord) * _CellSize;
+
+    float density = 0.0;
+    for (int i = 0; i < _ParticleCount; i++)
+    {
+        float3 rel = _Particles[i].Position - _MinPos;
+        density += Poly6(dot(cellPos - rel, cellPos - rel));
+    }
+
+    _DensityRead[cellIndex] = density;
+}
+
+[numthreads(64, 1, 1)]
+void BlurDensity(uint3 id : SV_DispatchThreadID)
+{
+    uint cellIndex = id.x;
+    uint cellCount = (uint)(_KeyCount * 64);
+    if (cellIndex >= cellCount)
+        return;
+
+    _DensityWrite[cellIndex] = _DensityRead[cellIndex];
+}
+
+[numthreads(64, 1, 1)]
+void MarchingCubes(uint3 id : SV_DispatchThreadID)
+{
+    uint keyIndex = id.x;
+    if (keyIndex >= (uint)_KeyCount)
+        return;
+
+    _Stats[0] = (uint)_KeyCount;
+}
