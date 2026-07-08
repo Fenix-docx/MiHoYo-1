@@ -328,6 +328,13 @@ namespace Slime.Tests
             }
         }
 
+        [Test]
+        public void GpuSurfacePipelineReportsUnsupportedWithoutShader()
+        {
+            using SlimeGpuSurfacePipeline pipeline = new SlimeGpuSurfacePipeline(null);
+            Assert.That(pipeline.IsSupported, Is.False);
+        }
+
         static int3 LocalCoord(int idx)
         {
             return new int3(idx & 3, (idx >> 2) & 3, (idx >> 4) & 3);

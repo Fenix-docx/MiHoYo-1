@@ -27,6 +27,7 @@ namespace Slime
         NativeArray<int> _mcStats;
         NativeHashMap<int3, int> _gridLut;
         NativeArray<float3> _bounds;
+        SlimeGpuSurfacePipeline _gpuPipeline;
         Mesh _mesh;
         MeshFilter _mf;
         MeshRenderer _mr;
@@ -54,22 +55,22 @@ namespace Slime
             _mcStats = new NativeArray<int>(SlimeMC.MarchingCubesJob.StatsLength, Allocator.Persistent);
             _gridLut = new NativeHashMap<int3, int>(SlimeConst.GridNum, Allocator.Persistent);
             _bounds = new NativeArray<float3>(2, Allocator.Persistent);
+            _gpuPipeline = new SlimeGpuSurfacePipeline(gpuSurfaceComputeShader);
         }
 
         public void BuildSurface(NativeArray<SlimeParticle> particles, float isoLevel)
         {
-            switch (surfaceBuildMode)
-            {
-                case SlimeSurfaceBuildMode.GpuAsyncReadback:
-                    BuildSurfaceCpu(particles, isoLevel);
-                    break;
-                case SlimeSurfaceBuildMode.Auto:
-                    BuildSurfaceCpu(particles, isoLevel);
-                    break;
-                default:
-                    BuildSurfaceCpu(particles, isoLevel);
-                    break;
-            }
+            if (surfaceBuildMode != SlimeSurfaceBuildMode.Cpu && TryBuildSurfaceGpuAsync(particles, isoLevel))
+                return;
+
+            BuildSurfaceCpu(particles, isoLevel);
+        }
+
+        bool TryBuildSurfaceGpuAsync(NativeArray<SlimeParticle> particles, float isoLevel)
+        {
+            return _gpuPipeline != null &&
+                   _gpuPipeline.IsSupported &&
+                   _gpuPipeline.TryApplyCompletedReadback(_mesh);
         }
 
         void BuildSurfaceCpu(NativeArray<SlimeParticle> particles, float isoLevel)
@@ -170,6 +171,8 @@ namespace Slime
 
         void OnDestroy()
         {
+            _gpuPipeline?.Dispose();
+            _gpuPipeline = null;
             if (_grid.IsCreated) _grid.Dispose();
             if (_gridTemp.IsCreated) _gridTemp.Dispose();
             if (_blurBlockScratch.IsCreated) _blurBlockScratch.Dispose();
