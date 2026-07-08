@@ -20,6 +20,8 @@ namespace Slime
         public int LastVertexCount { get; private set; }
         public int LastReadbackLatencyFrames { get; private set; }
         public bool LastOverflow { get; private set; }
+        public int LastVisitedBlockCount { get; private set; }
+        public int LastSkippedBlockCount { get; private set; }
 
         public bool TrySchedule(
             NativeArray<SlimeParticle> particles,
@@ -31,7 +33,9 @@ namespace Slime
             LastVertexCount = 0;
             LastReadbackLatencyFrames = 0;
             LastOverflow = false;
-            return IsSupported && particles.IsCreated && keys.IsCreated && keys.Length > 0;
+            LastVisitedBlockCount = 0;
+            LastSkippedBlockCount = 0;
+            return false;
         }
 
         public bool TryApplyCompletedReadback(Mesh mesh)

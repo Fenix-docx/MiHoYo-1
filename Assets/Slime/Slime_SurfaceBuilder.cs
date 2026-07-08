@@ -60,24 +60,61 @@ namespace Slime
 
         public void BuildSurface(NativeArray<SlimeParticle> particles, float isoLevel)
         {
-            if (surfaceBuildMode != SlimeSurfaceBuildMode.Cpu && TryBuildSurfaceGpuAsync(particles, isoLevel))
+            if (surfaceBuildMode == SlimeSurfaceBuildMode.Cpu)
+            {
+                BuildSurfaceCpu(particles, isoLevel);
                 return;
+            }
 
-            BuildSurfaceCpu(particles, isoLevel);
+            if (_gpuPipeline != null && _gpuPipeline.TryApplyCompletedReadback(_mesh))
+            {
+                LastMarchingCubeBlockCount = _gpuPipeline.LastVisitedBlockCount;
+                LastSkippedMarchingCubeBlockCount = _gpuPipeline.LastSkippedBlockCount;
+            }
+
+            NativeArray<int3> keys;
+            float3 minPos;
+            if (!PrepareSparseSurfaceData(particles, out keys, out minPos))
+            {
+                LastMarchingCubeBlockCount = 0;
+                LastSkippedMarchingCubeBlockCount = 0;
+                _mesh.Clear();
+                keys.Dispose();
+                return;
+            }
+
+            try
+            {
+                bool scheduledGpu = TryBuildSurfaceGpuAsync(particles, keys, minPos, isoLevel);
+
+                if (!scheduledGpu)
+                    BuildSurfaceCpuPrepared(particles, keys, minPos, isoLevel);
+            }
+            finally
+            {
+                keys.Dispose();
+            }
         }
 
-        bool TryBuildSurfaceGpuAsync(NativeArray<SlimeParticle> particles, float isoLevel)
+        bool TryBuildSurfaceGpuAsync(
+            NativeArray<SlimeParticle> particles,
+            NativeArray<int3> keys,
+            float3 minPos,
+            float isoLevel)
         {
             return _gpuPipeline != null &&
                    _gpuPipeline.IsSupported &&
-                   _gpuPipeline.TryApplyCompletedReadback(_mesh);
+                   _gpuPipeline.TrySchedule(particles, keys, _gridLut, minPos, isoLevel);
         }
 
-        void BuildSurfaceCpu(NativeArray<SlimeParticle> particles, float isoLevel)
+        bool PrepareSparseSurfaceData(
+            NativeArray<SlimeParticle> particles,
+            out NativeArray<int3> keys,
+            out float3 minPos)
         {
             // 1. Bounds
             new SlimeDensityField.CalcBoundsJob { Ps = particles, Bounds = _bounds }.Schedule().Complete();
-            float3 minPos = _bounds[0];
+            minPos = _bounds[0];
 
             // 2. Clear (IJob, single-threaded)
             new SlimeDensityField.ClearGridJob { Grid = _grid }.Schedule().Complete();
@@ -90,8 +127,15 @@ namespace Slime
                 MaxBlocks = SlimeConst.GridNum,
             }.Schedule().Complete();
 
-            var keys = _gridLut.GetKeyArray(Allocator.TempJob);
-            if (keys.Length == 0)
+            keys = _gridLut.GetKeyArray(Allocator.TempJob);
+            return keys.Length > 0;
+        }
+
+        void BuildSurfaceCpu(NativeArray<SlimeParticle> particles, float isoLevel)
+        {
+            NativeArray<int3> keys;
+            float3 minPos;
+            if (!PrepareSparseSurfaceData(particles, out keys, out minPos))
             {
                 LastMarchingCubeBlockCount = 0;
                 LastSkippedMarchingCubeBlockCount = 0;
@@ -100,6 +144,22 @@ namespace Slime
                 return;
             }
 
+            try
+            {
+                BuildSurfaceCpuPrepared(particles, keys, minPos, isoLevel);
+            }
+            finally
+            {
+                keys.Dispose();
+            }
+        }
+
+        void BuildSurfaceCpuPrepared(
+            NativeArray<SlimeParticle> particles,
+            NativeArray<int3> keys,
+            float3 minPos,
+            float isoLevel)
+        {
             // 4. Density projection
             new SlimeDensityField.DensityProjectionJob
             {
@@ -152,7 +212,6 @@ namespace Slime
             }
             finally
             {
-                keys.Dispose();
                 verts.Dispose();
                 norms.Dispose();
                 tris.Dispose();
