@@ -22,6 +22,7 @@ RWStructuredBuffer<float> _DensityWrite;
 AppendStructuredBuffer<SurfaceVertexGpu> _Vertices;
 RWStructuredBuffer<uint> _Stats;
 
+// Stats layout: [0] visited blocks, [1] skipped blocks, [2] overflow flag, [3] vertex count.
 int _ParticleCount;
 int _KeyCount;
 float3 _MinPos;
@@ -99,5 +100,11 @@ void MarchingCubes(uint3 id : SV_DispatchThreadID)
     if (keyIndex >= (uint)_KeyCount)
         return;
 
-    _Stats[0] = (uint)_KeyCount;
+    if (keyIndex == 0)
+    {
+        _Stats[0] = (uint)_KeyCount;
+        _Stats[1] = 0;
+        _Stats[2] = 0;
+        _Stats[3] = 0;
+    }
 }
