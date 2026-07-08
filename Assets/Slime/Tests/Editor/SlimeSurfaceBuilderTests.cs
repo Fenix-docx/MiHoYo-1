@@ -309,6 +309,25 @@ namespace Slime.Tests
             }
         }
 
+        [Test]
+        public void SurfaceBuilderDefaultsToCpuSurfaceMode()
+        {
+            GameObject slimeObject = new GameObject("surface builder mode test");
+
+            try
+            {
+                slimeObject.AddComponent<MeshFilter>();
+                slimeObject.AddComponent<MeshRenderer>();
+                SlimeSurfaceBuilder builder = slimeObject.AddComponent<SlimeSurfaceBuilder>();
+
+                Assert.That(builder.SurfaceBuildMode, Is.EqualTo(SlimeSurfaceBuildMode.Cpu));
+            }
+            finally
+            {
+                Object.DestroyImmediate(slimeObject);
+            }
+        }
+
         static int3 LocalCoord(int idx)
         {
             return new int3(idx & 3, (idx >> 2) & 3, (idx >> 4) & 3);

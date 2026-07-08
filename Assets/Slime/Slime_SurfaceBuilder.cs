@@ -6,11 +6,20 @@ using UnityEngine.Rendering;
 
 namespace Slime
 {
+    public enum SlimeSurfaceBuildMode
+    {
+        Cpu,
+        GpuAsyncReadback,
+        Auto,
+    }
+
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class SlimeSurfaceBuilder : MonoBehaviour
     {
         [Header("Surface")]
         public Material surfaceMaterial;
+        [SerializeField] SlimeSurfaceBuildMode surfaceBuildMode = SlimeSurfaceBuildMode.Cpu;
+        [SerializeField] ComputeShader gpuSurfaceComputeShader;
 
         NativeArray<float> _grid, _gridTemp;
         NativeArray<float> _blurBlockScratch;
@@ -26,6 +35,7 @@ namespace Slime
         public bool HasSurface => _mesh != null && _mesh.vertexCount > 0;
         public int LastMarchingCubeBlockCount { get; private set; }
         public int LastSkippedMarchingCubeBlockCount { get; private set; }
+        public SlimeSurfaceBuildMode SurfaceBuildMode => surfaceBuildMode;
 
         void Awake()
         {
@@ -47,6 +57,22 @@ namespace Slime
         }
 
         public void BuildSurface(NativeArray<SlimeParticle> particles, float isoLevel)
+        {
+            switch (surfaceBuildMode)
+            {
+                case SlimeSurfaceBuildMode.GpuAsyncReadback:
+                    BuildSurfaceCpu(particles, isoLevel);
+                    break;
+                case SlimeSurfaceBuildMode.Auto:
+                    BuildSurfaceCpu(particles, isoLevel);
+                    break;
+                default:
+                    BuildSurfaceCpu(particles, isoLevel);
+                    break;
+            }
+        }
+
+        void BuildSurfaceCpu(NativeArray<SlimeParticle> particles, float isoLevel)
         {
             // 1. Bounds
             new SlimeDensityField.CalcBoundsJob { Ps = particles, Bounds = _bounds }.Schedule().Complete();
