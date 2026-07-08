@@ -2,6 +2,7 @@ using NUnit.Framework;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEngine;
 using static Unity.Mathematics.math;
 
 namespace Slime.Tests
@@ -117,6 +118,85 @@ namespace Slime.Tests
                 gridLut.Dispose();
                 grid.Dispose();
                 keys.Dispose();
+            }
+        }
+
+        [Test]
+        public void SurfaceContactUtilityFindsColliderNearMeshVertex()
+        {
+            GameObject colliderObject = new GameObject("surface contact target");
+            Mesh mesh = new Mesh { name = "contact mesh" };
+            var vertices = new System.Collections.Generic.List<Vector3>(16);
+
+            try
+            {
+                BoxCollider box = colliderObject.AddComponent<BoxCollider>();
+                box.center = Vector3.zero;
+                box.size = Vector3.one * 0.25f;
+
+                mesh.vertices = new[]
+                {
+                    Vector3.zero,
+                    Vector3.right,
+                    Vector3.up,
+                };
+                mesh.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Triangles, 0);
+                mesh.RecalculateBounds();
+
+                bool touched = SlimeSurfaceContactUtility.TryGetMeshContact(
+                    mesh,
+                    new Collider[] { box },
+                    vertices,
+                    maxVertexChecks: 16,
+                    contactPadding: 0.05f,
+                    out Vector3 contactPoint);
+
+                Assert.That(touched, Is.True);
+                Assert.That(Vector3.Distance(contactPoint, Vector3.zero), Is.LessThan(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(colliderObject);
+            }
+        }
+
+        [Test]
+        public void SurfaceContactUtilityIgnoresFarCollider()
+        {
+            GameObject colliderObject = new GameObject("far surface contact target");
+            Mesh mesh = new Mesh { name = "far contact mesh" };
+            var vertices = new System.Collections.Generic.List<Vector3>(16);
+
+            try
+            {
+                colliderObject.transform.position = Vector3.one * 10f;
+                BoxCollider box = colliderObject.AddComponent<BoxCollider>();
+                box.size = Vector3.one * 0.25f;
+
+                mesh.vertices = new[]
+                {
+                    Vector3.zero,
+                    Vector3.right,
+                    Vector3.up,
+                };
+                mesh.SetIndices(new[] { 0, 1, 2 }, MeshTopology.Triangles, 0);
+                mesh.RecalculateBounds();
+
+                bool touched = SlimeSurfaceContactUtility.TryGetMeshContact(
+                    mesh,
+                    new Collider[] { box },
+                    vertices,
+                    maxVertexChecks: 16,
+                    contactPadding: 0.05f,
+                    out _);
+
+                Assert.That(touched, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(colliderObject);
             }
         }
 
