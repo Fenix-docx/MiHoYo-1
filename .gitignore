@@ -67,6 +67,7 @@ crashlytics-build.properties
 # Local assistant/tooling notes
 /CLAUDE.md
 /ignore.conf
+/.worktrees/
 
 # Project-specific: keep the Slime workspace small for GitHub.
 /Assets/Belle/
