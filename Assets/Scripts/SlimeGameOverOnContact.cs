@@ -37,6 +37,8 @@ namespace Slime
 
         public bool HasTriggered => _hasTriggered;
         public UnityEvent OnParticlesAdded => onParticlesAdded;
+        public AudioSource audioSource;
+        public AudioClip audioClip;
 
         void Awake()
         {
@@ -176,6 +178,7 @@ namespace Slime
 
         bool TryAddParticles()
         {
+            audioSource.PlayOneShot(audioClip);
             if (!CanTrigger() || !ResolveSlimeSimulator())
                 return false;
 

@@ -83,6 +83,7 @@ namespace Slime
         void OnCollisionEnter(Collision collision)
         {
             RegisterPhysicsContact(collision != null ? collision.collider : null);
+            
         }
 
         void OnCollisionStay(Collision collision)

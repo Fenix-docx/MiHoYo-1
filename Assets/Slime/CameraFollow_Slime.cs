@@ -147,19 +147,11 @@ namespace Slime
 
         static float ReadScrollDelta()
         {
-#if ENABLE_LEGACY_INPUT_MANAGER
-            return Input.GetAxis("Mouse ScrollWheel");
-#else
-            return 0f;
-#endif
-        }
-
-        static Vector3 SetOffsetDistance(Vector3 offset, float distance)
-        {
-            if (offset.sqrMagnitude <= MinCastDistance * MinCastDistance)
-                return new Vector3(0f, 0f, -distance);
-
-            return offset.normalized * distance;
+            #if ENABLE_LEGACY_INPUT_MANAGER
+                return Input.GetAxis("Mouse ScrollWheel");
+            #else
+                return 0f;
+            #endif
         }
 
         Vector3 ResolveCameraPosition(Vector3 lookTarget, Vector3 desiredPosition, out bool collisionAdjusted)

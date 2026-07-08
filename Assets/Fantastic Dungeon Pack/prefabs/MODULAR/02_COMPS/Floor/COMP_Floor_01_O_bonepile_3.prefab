@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3160700588539630652}
+  - component: {fileID: 1451562284920372331}
   m_Layer: 0
   m_Name: COMP_Floor_01_O_bonepile_3
   m_TagString: Untagged
@@ -48,6 +49,27 @@ Transform:
   - {fileID: 5913425897774391553}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &1451562284920372331
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3160700588539630653}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 4.138693, y: 0.26581824, z: 4.1434445}
+  m_Center: {x: -2.033791, y: 0.05972734, z: 1.9985386}
 --- !u!1001 &3160700586802947012
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -108,7 +130,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: P_MOD_Floor_01_O_singlestone_broken_2
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 8091820980927410083, guid: 6a40d22c8f302f84d9eaf05f9aef35ce, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -178,7 +201,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: P_MOD_Floor_01_O_singlestone_broken_3
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 2206161702059560250, guid: 4d03ac036897e01468472f125da392dc, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -248,7 +272,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: P_MOD_Floor_01_O_singlestone_2
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 5634603921773542709, guid: f0e8d29d7092c384ea9a74c68fc731ae, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -318,7 +343,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7104578999736713054, guid: 9d5fa919615e4bb469d4eb750ad9bbc2, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -336,6 +362,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3160700588539630652}
     m_Modifications:
+    - target: {fileID: 1097514043628781850, guid: 747c6ec7284b93841872c5015e24672a, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5735048445724685821, guid: 747c6ec7284b93841872c5015e24672a, type: 3}
       propertyPath: m_Name
       value: P_MOD_Floor_01_O_straight_med_2
@@ -384,7 +414,8 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 1097514043628781850, guid: 747c6ec7284b93841872c5015e24672a, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -454,7 +485,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: P_MOD_Floor_01_O_singlestone_5
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 669024225132676265, guid: ebcb18ff0cdd96f4ca1af65f4aabf125, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -524,7 +556,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7475136179324027885, guid: 64537ef93e1c7eb4cb4d6810f35b9a6f, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -594,7 +627,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6451026453026353899, guid: 96682dd32666a3542aef17a2ef810a97, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -664,7 +698,8 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 104931174656543109, guid: 0ca4af8a762441b4f826ac5a6930a40e, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -734,7 +769,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: P_MOD_Floor_01_O_singlestone_7
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 986654931734860364, guid: 0d0e6a217fb8ca34684fccd9280e5022, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -804,7 +840,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: P_MOD_Floor_01_O_singlestone_6
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 805724106371754384, guid: 56500cfc9424be04c8c708a595b97f58, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -874,7 +911,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6433856498282937811, guid: 8452fe4b7726ede40964e28cbe0c50ee, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -944,7 +982,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7000019746894603250, guid: 870055fc57c9ee94da34ac9271f2070c, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -1014,7 +1053,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7414462582057185890, guid: ab400f10bfcca014cafe2def7149f295, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -1084,7 +1124,8 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 775904242455368841, guid: 079b40a5cb4188d4d9df20549b3b5ec4, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -1154,7 +1195,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7126759338732547971, guid: 3946b86070fb34247b222d533fbf7741, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -1224,7 +1266,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6329692929314259538, guid: 355baad1938292b48887e6f03e84f8b4, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
