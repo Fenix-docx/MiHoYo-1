@@ -92,7 +92,6 @@ namespace Slime
 
             _particleBuffer.SetData(particles);
             _keyBuffer.SetData(keys);
-            _vertexBuffer.SetCounterValue(0);
             _statsBuffer.SetData(_zeroStats);
 
             int clearKernel = _computeShader.FindKernel("ClearDensity");
@@ -198,6 +197,7 @@ namespace Slime
 
             _computeShader.SetInt("_ParticleCount", particleCount);
             _computeShader.SetInt("_KeyCount", keyCount);
+            _computeShader.SetInt("_MaxVertexCount", _vertexCapacity);
             _computeShader.SetVector("_MinPos", new Vector4(minPos.x, minPos.y, minPos.z, 0f));
             _computeShader.SetFloat("_IsoLevel", isoLevel);
             _computeShader.SetFloat("_CellSize", SlimeConst.CellSize);
@@ -262,7 +262,7 @@ namespace Slime
             EnsureBuffer(ref _keyBuffer, ref _keyCapacity, keyCount, 12, ComputeBufferType.Structured);
             EnsureBuffer(ref _densityReadBuffer, ref _densityReadCapacity, densityCount, 4, ComputeBufferType.Structured);
             EnsureBuffer(ref _densityWriteBuffer, ref _densityWriteCapacity, densityCount, 4, ComputeBufferType.Structured);
-            EnsureBuffer(ref _vertexBuffer, ref _vertexCapacity, maxVertexCount, SurfaceVertexStride, ComputeBufferType.Append);
+            EnsureBuffer(ref _vertexBuffer, ref _vertexCapacity, maxVertexCount, SurfaceVertexStride, ComputeBufferType.Structured);
             EnsureBuffer(ref _statsBuffer, ref _statsCapacity, 4, 4, ComputeBufferType.Structured);
         }
 
