@@ -737,7 +737,19 @@ CPU 侧模拟保持权威，只把粒子和稀疏 block 元数据上传到 compu
 GPU 读回尚未完成时，`SlimeSurfaceBuilder` 会继续保留上一帧有效 Mesh，不会因为暂时没有新的
 GPU 结果而清空表面。若稀疏数据准备阶段没有任何活跃 block，则说明当前没有表面，清空 Mesh 仍然是正确行为。
 
-### 4.4 复杂 Mesh 形状目标
+### 4.4 GPU 表面重建性能验收状态
+
+本环境中的 GPU 表面重建性能验收状态为 **pending / unverified**。原因是
+`C:\Program Files\Unity\Hub\Editor\6000.4.2f1\Editor\Unity.exe` 缺失，因此这里未运行
+Play Mode profiler、shader import/compile 或 EditMode tests。不要把本节视为 profiling passed。
+
+后续在可用 Unity Editor 环境中需要记录：
+
+| Scene | Particle count | Split state | CPU mode BuildSurface peak | GPU async mode BuildSurface peak | Readback latency | Surface contact scripts verified | Shader compile/import status |
+|---|---:|---|---:|---:|---|---|---|
+| Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
+
+### 4.5 复杂 Mesh 形状目标
 
 当前 `Slime_ShapeTarget.cs` 的主要限制：
 
