@@ -723,8 +723,8 @@ Pass 3: GenerateTriangles(IJobParallelFor) 并行写顶点/索引
 CPU 侧模拟保持权威，只把粒子和稀疏 block 元数据上传到 compute shader，在 GPU 上重建表面，
 再通过异步读回把紧凑顶点写回现有 CPU `Mesh`。
 
-这样可以保留依赖 `CurrentSurfaceMesh` 的玩法脚本，包括表面接触开关，但代价是通常会有
-1-3 帧读回延迟。玩法代码中应避免同步调用 `ComputeBuffer.GetData()`；它会阻塞主线程，
+这样可以保留依赖 `CurrentSurfaceMesh` 的玩法脚本，包括表面接触开关，但代价是会有随 GPU
+负载变化的读回延迟。玩法代码中应避免同步调用 `ComputeBuffer.GetData()`；它会阻塞主线程，
 抵消这次迁移的性能收益。
 
 模式行为：
@@ -735,13 +735,15 @@ CPU 侧模拟保持权威，只把粒子和稀疏 block 元数据上传到 compu
   然后在后续符合条件的帧继续重试 GPU。
 
 GPU 读回尚未完成时，`SlimeSurfaceBuilder` 会继续保留上一帧有效 Mesh，不会因为暂时没有新的
-GPU 结果而清空表面。若稀疏数据准备阶段没有任何活跃 block，则说明当前没有表面，清空 Mesh 仍然是正确行为。
+GPU 结果而清空表面，也不会按固定帧数切换到完整 CPU 重建。读回错误或被容量策略抑制时同样
+保留最后有效 Mesh；只有成功返回零顶点或没有任何活跃 block 时才清空表面。
 
 ### 4.4 GPU 表面重建性能验收状态
 
-本环境中的 GPU 表面重建性能验收状态为 **pending / unverified**。原因是
-`C:\Program Files\Unity\Hub\Editor\6000.4.2f1\Editor\Unity.exe` 缺失，因此这里未运行
-Play Mode profiler、shader import/compile 或 EditMode tests。不要把本节视为 profiling passed。
+本环境中的 GPU 表面重建性能验收状态为 **pending / unverified**。已使用
+`C:\Users\12118\Unity\6000.4.2f1\Editor\Unity.exe` 在 batchmode 下完成 37 个 EditMode 测试，
+结果为 37 passed、0 failed。当前仍未完成 Play Mode profiler、GPU 模式场景验收和正式的
+shader 性能验证，因此不应视为 profiling passed。
 
 后续在可用 Unity Editor 环境中需要记录：
 

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.IO;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -333,6 +334,192 @@ namespace Slime.Tests
         {
             using SlimeGpuSurfacePipeline pipeline = new SlimeGpuSurfacePipeline(null);
             Assert.That(pipeline.IsSupported, Is.False);
+            Assert.That(pipeline.LastScheduleStatus, Is.EqualTo(SlimeGpuSurfaceScheduleStatus.NotScheduled));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineExposesReadbackFreshnessDiagnostics()
+        {
+            using SlimeGpuSurfacePipeline pipeline = new SlimeGpuSurfacePipeline(null);
+
+            Assert.That(pipeline.LastScheduledReadbackGeneration, Is.EqualTo(0));
+            Assert.That(pipeline.LastAppliedReadbackGeneration, Is.EqualTo(0));
+            Assert.That(pipeline.LastDroppedReadbackGeneration, Is.EqualTo(0));
+            Assert.That(pipeline.PendingReadbackAgeFrames, Is.EqualTo(0));
+            Assert.That(pipeline.LastAppliedReadbackFrame, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineOnlyClearsMeshForSuccessfulEmptySurface()
+        {
+            Assert.That(SlimeGpuSurfacePipeline.ShouldClearMeshAfterReadback(
+                readbackSucceeded: false, readbackSuppressed: false, vertexCount: 0), Is.False);
+            Assert.That(SlimeGpuSurfacePipeline.ShouldClearMeshAfterReadback(
+                readbackSucceeded: true, readbackSuppressed: true, vertexCount: 0), Is.False);
+            Assert.That(SlimeGpuSurfacePipeline.ShouldClearMeshAfterReadback(
+                readbackSucceeded: true, readbackSuppressed: false, vertexCount: 0), Is.True);
+            Assert.That(SlimeGpuSurfacePipeline.ShouldClearMeshAfterReadback(
+                readbackSucceeded: true, readbackSuppressed: false, vertexCount: 3), Is.False);
+        }
+
+        [Test]
+        public void GpuSurfacePipelineUsesSinglePendingReadback()
+        {
+            using SlimeGpuSurfacePipeline pipeline = new SlimeGpuSurfacePipeline(null);
+            Assert.That(pipeline.MaxPendingReadbacks, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineEstimatesSurfaceVertexReadbackBytes()
+        {
+            Assert.That(SlimeGpuSurfacePipeline.EstimateSurfaceVertexReadbackBytes(-1), Is.EqualTo(0));
+            Assert.That(SlimeGpuSurfacePipeline.EstimateSurfaceVertexReadbackBytes(3), Is.EqualTo(72));
+            Assert.That(SlimeGpuSurfacePipeline.EstimateSurfaceVertexReadbackBytes(1024), Is.EqualTo(24576));
+        }
+
+        [Test]
+        public void SurfaceBuildModeIncludesGpuDirectRender()
+        {
+            Assert.That(System.Enum.IsDefined(typeof(SlimeSurfaceBuildMode), "GpuDirectRender"), Is.True);
+        }
+
+        [Test]
+        public void SurfaceBuilderDoesNotUseDirectGpuDrawPath()
+        {
+            string builderSource = File.ReadAllText("Assets/Slime/Slime_SurfaceBuilder.cs");
+
+            Assert.That(builderSource, Does.Not.Contain(".DrawDirectSurface("));
+        }
+
+        [Test]
+        public void SurfaceBuilderAcceptsOnlyGpuDirectSurfaceShaderName()
+        {
+            Assert.That(SlimeSurfaceBuilder.IsGpuDirectSurfaceShaderName("Slime/GPU Surface Draw"), Is.True);
+            Assert.That(SlimeSurfaceBuilder.IsGpuDirectSurfaceShaderName("HDRP/Lit"), Is.False);
+            Assert.That(SlimeSurfaceBuilder.IsGpuDirectSurfaceShaderName(string.Empty), Is.False);
+        }
+
+        [Test]
+        public void GpuDirectSurfaceShaderUsesUrpWorldSpaceProjection()
+        {
+            string shaderSource = File.ReadAllText("Assets/Slime/SlimeGpuSurfaceDraw.shader");
+
+            Assert.That(shaderSource, Does.Contain("\"RenderPipeline\" = \"UniversalPipeline\""));
+            Assert.That(shaderSource, Does.Contain("\"LightMode\" = \"UniversalForward\""));
+            Assert.That(shaderSource, Does.Contain("Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"));
+            Assert.That(shaderSource, Does.Contain("TransformWorldToHClip(vertex.Position)"));
+            Assert.That(shaderSource, Does.Not.Contain("HDRenderPipeline"));
+            Assert.That(shaderSource, Does.Not.Contain("render-pipelines.high-definition"));
+        }
+
+        [Test]
+        public void GpuSurfaceComputeUsesGradientNormalsForReadbackMesh()
+        {
+            string computeSource = File.ReadAllText("Assets/Slime/Slime_Surface.compute");
+
+            Assert.That(computeSource, Does.Contain("ReadGridTrilinear("));
+            Assert.That(computeSource, Does.Contain("CalcNormal("));
+            Assert.That(computeSource, Does.Contain("MatchHemisphere("));
+            Assert.That(computeSource, Does.Contain("TryAppendTriangle(v0, v1, v2, n0, n1, n2)"));
+            Assert.That(computeSource, Does.Not.Contain("TryAppendTriangle(v0, v1, v2, normalize(cp))"));
+        }
+
+        [Test]
+        public void SurfaceBuilderKeepsLastMeshWhileGpuReadbackIsPending()
+        {
+            string builderSource = File.ReadAllText("Assets/Slime/Slime_SurfaceBuilder.cs");
+
+            Assert.That(builderSource, Does.Contain("_gpuPipeline.HasPendingReadback)"));
+            Assert.That(builderSource, Does.Not.Contain("cpuFallbackWhileGpuReadbackStale"));
+            Assert.That(builderSource, Does.Not.Contain("ShouldCpuFallbackForStaleGpuReadback"));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineCapsAsyncReadbackSize()
+        {
+            long cappedBytes = SlimeGpuSurfacePipeline.EstimateSurfaceVertexReadbackBytes(
+                SlimeGpuSurfacePipeline.MaxAsyncReadbackVertexCount);
+
+            Assert.That(cappedBytes, Is.LessThanOrEqualTo(8L * 1024L * 1024L));
+            Assert.That(SlimeGpuSurfacePipeline.MaxAsyncReadbackVertexCount, Is.LessThan(768 * 125 * 15));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineSuppressesOverflowedReadback()
+        {
+            SlimeGpuSurfacePipeline.ReadbackStatsSnapshot overflowed =
+                new SlimeGpuSurfacePipeline.ReadbackStatsSnapshot(12, 0, true, 128);
+            SlimeGpuSurfacePipeline.ReadbackStatsSnapshot oversized =
+                new SlimeGpuSurfacePipeline.ReadbackStatsSnapshot(
+                    12,
+                    0,
+                    false,
+                    SlimeGpuSurfacePipeline.MaxAsyncReadbackVertexCount + 1);
+
+            Assert.That(SlimeGpuSurfacePipeline.ShouldSuppressVertexReadback(overflowed), Is.True);
+            Assert.That(SlimeGpuSurfacePipeline.ShouldSuppressVertexReadback(oversized), Is.True);
+        }
+
+        [Test]
+        public void GpuSurfacePipelineReportsUnsupportedScheduleAttempt()
+        {
+            using SlimeGpuSurfacePipeline pipeline = new SlimeGpuSurfacePipeline(null);
+
+            bool scheduled = pipeline.TrySchedule(
+                default,
+                default,
+                default,
+                default,
+                default,
+                1f,
+                requestReadback: true);
+
+            Assert.That(scheduled, Is.False);
+            Assert.That(pipeline.LastScheduleStatus, Is.EqualTo(SlimeGpuSurfaceScheduleStatus.Unsupported));
+            Assert.That(pipeline.LastScheduleFailure, Does.Contain("compute"));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineSnapshotsReadbackStatsBeforeVertexReadback()
+        {
+            SlimeGpuSurfacePipeline.ReadbackStatsSnapshot snapshot =
+                SlimeGpuSurfacePipeline.DecodeReadbackStats(new uint[] { 12u, 3u, 0u, 99u }, vertexCapacity: 80);
+
+            Assert.That(snapshot.VisitedBlockCount, Is.EqualTo(12));
+            Assert.That(snapshot.SkippedBlockCount, Is.EqualTo(3));
+            Assert.That(snapshot.Overflow, Is.False);
+            Assert.That(snapshot.VertexCount, Is.EqualTo(80));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineCalculatesPowerOfTwoHashCapacity()
+        {
+            Assert.That(SlimeGpuSurfacePipeline.CalculateKeyHashCapacity(0), Is.EqualTo(1));
+            Assert.That(SlimeGpuSurfacePipeline.CalculateKeyHashCapacity(1), Is.EqualTo(2));
+            Assert.That(SlimeGpuSurfacePipeline.CalculateKeyHashCapacity(3), Is.EqualTo(8));
+            Assert.That(SlimeGpuSurfacePipeline.CalculateKeyHashCapacity(768), Is.EqualTo(2048));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineShrinksActiveHashCapacityAfterBufferGrowth()
+        {
+            Assert.That(
+                SlimeGpuSurfacePipeline.ResolveActiveKeyHashCapacity(keyCount: 64, allocatedCapacity: 2048),
+                Is.EqualTo(128));
+            Assert.That(
+                SlimeGpuSurfacePipeline.ResolveActiveKeyHashCapacity(keyCount: 768, allocatedCapacity: 2048),
+                Is.EqualTo(2048));
+        }
+
+        [Test]
+        public void GpuSurfacePipelineHashesNegativeBlockKeysDeterministically()
+        {
+            int3 key = new int3(-7, 13, -29);
+            int first = SlimeGpuSurfacePipeline.HashBlockKey(key);
+            int second = SlimeGpuSurfacePipeline.HashBlockKey(key);
+
+            Assert.That(first, Is.EqualTo(second));
+            Assert.That(first, Is.Not.EqualTo(SlimeGpuSurfacePipeline.HashBlockKey(new int3(-7, 13, -28))));
         }
 
         static int3 LocalCoord(int idx)

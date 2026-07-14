@@ -1,7 +1,9 @@
 #pragma kernel ClearDensity
 #pragma kernel ProjectDensity
+#pragma kernel FinalizeDensity
 #pragma kernel BlurDensity
 #pragma kernel MarchingCubes
+#pragma kernel BuildDrawArgs
 
 struct SlimeParticleGpu
 {
@@ -17,14 +19,19 @@ struct SurfaceVertexGpu
 
 StructuredBuffer<SlimeParticleGpu> _Particles;
 StructuredBuffer<int3> _Keys;
+StructuredBuffer<int3> _KeyHashKeys;
+StructuredBuffer<int> _KeyHashValues;
+RWStructuredBuffer<uint> _DensityAccum;
 RWStructuredBuffer<float> _DensityRead;
 RWStructuredBuffer<float> _DensityWrite;
 RWStructuredBuffer<SurfaceVertexGpu> _Vertices;
 RWStructuredBuffer<uint> _Stats;
+RWStructuredBuffer<uint> _DrawArgs;
 
 // Stats layout: [0] visited blocks, [1] skipped blocks, [2] overflow flag, [3] appended vertex count.
 int _ParticleCount;
 int _KeyCount;
+int _KeyHashCapacity;
 int _MaxVertexCount;
 float3 _MinPos;
 float _IsoLevel;
@@ -32,6 +39,8 @@ float _CellSize;
 float _H2;
 float _Poly6Norm;
 float _Scale;
+float _DensityQuantizeScale;
+float _InvDensityQuantizeScale;
 
 static const int _TriTable[4096] = {
     -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -320,13 +329,38 @@ float ReadRawDensityByKeyIndex(uint keyIndex, int localIndex)
     return _DensityRead[keyIndex * 64 + (uint)localIndex];
 }
 
+uint HashBlockKey(int3 key)
+{
+    uint x = (uint)key.x * 73856093u;
+    uint y = (uint)key.y * 19349663u;
+    uint z = (uint)key.z * 83492791u;
+    uint hash = x ^ y ^ z;
+    hash ^= hash >> 16;
+    return hash;
+}
+
+bool SameKey(int3 a, int3 b)
+{
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+
 int FindKeyIndex(int3 key)
 {
-    for (int i = 0; i < _KeyCount; i++)
+    if (_KeyHashCapacity <= 0)
+        return -1;
+
+    uint mask = (uint)(_KeyHashCapacity - 1);
+    uint slot = HashBlockKey(key) & mask;
+    for (int probe = 0; probe < _KeyHashCapacity; probe++)
     {
-        int3 candidate = _Keys[i];
-        if (candidate.x == key.x && candidate.y == key.y && candidate.z == key.z)
-            return i;
+        int value = _KeyHashValues[slot];
+        if (value < 0)
+            return -1;
+
+        if (SameKey(_KeyHashKeys[slot], key))
+            return value;
+
+        slot = (slot + 1u) & mask;
     }
 
     return -1;
@@ -379,7 +413,57 @@ float3 EdgePos(int3 minCoord, int3 c, int edge)
     return (float3)c0 + ((float3)c1 - (float3)c0) * t;
 }
 
-bool TryAppendTriangle(float3 v0, float3 v1, float3 v2, float3 normal)
+float ReadBlockDensityClamped(int3 minCoord, int3 blockCoord)
+{
+    return ReadBlockDensity(minCoord, clamp(blockCoord, int3(0, 0, 0), int3(7, 7, 7)));
+}
+
+float ReadGridTrilinear(int3 minCoord, float3 p)
+{
+    p = clamp(p, 0.0, 7.0);
+    int3 p000 = (int3)floor(p);
+    int3 p111 = min(p000 + int3(1, 1, 1), int3(7, 7, 7));
+    float3 f = p - (float3)p000;
+
+    float c000 = ReadBlockDensityClamped(minCoord, p000);
+    float c100 = ReadBlockDensityClamped(minCoord, int3(p111.x, p000.y, p000.z));
+    float c010 = ReadBlockDensityClamped(minCoord, int3(p000.x, p111.y, p000.z));
+    float c110 = ReadBlockDensityClamped(minCoord, int3(p111.x, p111.y, p000.z));
+    float c001 = ReadBlockDensityClamped(minCoord, int3(p000.x, p000.y, p111.z));
+    float c101 = ReadBlockDensityClamped(minCoord, int3(p111.x, p000.y, p111.z));
+    float c011 = ReadBlockDensityClamped(minCoord, int3(p000.x, p111.y, p111.z));
+    float c111 = ReadBlockDensityClamped(minCoord, p111);
+
+    float c00 = lerp(c000, c100, f.x);
+    float c10 = lerp(c010, c110, f.x);
+    float c01 = lerp(c001, c101, f.x);
+    float c11 = lerp(c011, c111, f.x);
+    float c0 = lerp(c00, c10, f.y);
+    float c1 = lerp(c01, c11, f.y);
+    return lerp(c0, c1, f.z);
+}
+
+float3 NormalizeSafe(float3 value, float3 fallback)
+{
+    float lenSq = dot(value, value);
+    return lenSq > 1e-12 ? value * rsqrt(lenSq) : fallback;
+}
+
+float3 CalcNormal(int3 minCoord, float3 p, float3 fallback)
+{
+    float3 offset = float3(1.0, 0.0, 0.0);
+    float nx = ReadGridTrilinear(minCoord, p - offset.xyz) - ReadGridTrilinear(minCoord, p + offset.xyz);
+    float ny = ReadGridTrilinear(minCoord, p - offset.yxz) - ReadGridTrilinear(minCoord, p + offset.yxz);
+    float nz = ReadGridTrilinear(minCoord, p - offset.yzx) - ReadGridTrilinear(minCoord, p + offset.yzx);
+    return NormalizeSafe(float3(nx, ny, nz), fallback);
+}
+
+float3 MatchHemisphere(float3 normal, float3 reference)
+{
+    return dot(normal, reference) < 0.0 ? -normal : normal;
+}
+
+bool TryAppendTriangle(float3 v0, float3 v1, float3 v2, float3 n0, float3 n1, float3 n2)
 {
     uint reserved;
     InterlockedAdd(_Stats[3], 3u, reserved);
@@ -392,13 +476,15 @@ bool TryAppendTriangle(float3 v0, float3 v1, float3 v2, float3 normal)
     }
 
     SurfaceVertexGpu vertex;
-    vertex.Normal = normal;
 
     vertex.Position = v0;
+    vertex.Normal = n0;
     _Vertices[reserved + 0u] = vertex;
     vertex.Position = v1;
+    vertex.Normal = n1;
     _Vertices[reserved + 1u] = vertex;
     vertex.Position = v2;
+    vertex.Normal = n2;
     _Vertices[reserved + 2u] = vertex;
     return true;
 }
@@ -413,30 +499,50 @@ void ClearDensity(uint3 id : SV_DispatchThreadID)
 
     _DensityRead[index] = 0.0;
     _DensityWrite[index] = 0.0;
+    _DensityAccum[index] = 0u;
 }
 
 [numthreads(64, 1, 1)]
 void ProjectDensity(uint3 id : SV_DispatchThreadID)
+{
+    uint particleIndex = id.x;
+    if (particleIndex >= (uint)_ParticleCount)
+        return;
+
+    float3 rel = _Particles[particleIndex].Position - _MinPos;
+    int3 center = (int3)floor(rel / _CellSize);
+    for (int dz = -2; dz <= 2; dz++)
+    for (int dy = -2; dy <= 2; dy++)
+    for (int dx = -2; dx <= 2; dx++)
+    {
+        int3 coord = center + int3(dx, dy, dz);
+        int keyIndex = FindKeyIndex(coord >> 2);
+        if (keyIndex < 0)
+            continue;
+
+        float3 cellPos = (0.5 + (float3)coord) * _CellSize;
+        float density = Poly6(dot(cellPos - rel, cellPos - rel));
+        if (density <= 0.0)
+            continue;
+
+        uint quantized = (uint)min(density * _DensityQuantizeScale + 0.5, 4294967295.0);
+        if (quantized == 0u)
+            continue;
+
+        uint ignored;
+        InterlockedAdd(_DensityAccum[(uint)keyIndex * 64u + (uint)LocalIndex(coord)], quantized, ignored);
+    }
+}
+
+[numthreads(64, 1, 1)]
+void FinalizeDensity(uint3 id : SV_DispatchThreadID)
 {
     uint cellIndex = id.x;
     uint cellCount = (uint)(_KeyCount * 64);
     if (cellIndex >= cellCount)
         return;
 
-    uint keyIndex = cellIndex / 64;
-    uint local = cellIndex - keyIndex * 64;
-    int3 localCoord = LocalCoord(local);
-    int3 coord = _Keys[keyIndex] * 4 + localCoord;
-    float3 cellPos = (0.5 + (float3)coord) * _CellSize;
-
-    float density = 0.0;
-    for (int i = 0; i < _ParticleCount; i++)
-    {
-        float3 rel = _Particles[i].Position - _MinPos;
-        density += Poly6(dot(cellPos - rel, cellPos - rel));
-    }
-
-    _DensityRead[cellIndex] = density;
+    _DensityRead[cellIndex] = (float)_DensityAccum[cellIndex] * _InvDensityQuantizeScale;
 }
 
 [numthreads(64, 1, 1)]
@@ -480,11 +586,11 @@ void MarchingCubes(uint3 id : SV_DispatchThreadID)
     int3 minCoord = (key << 2) - 2;
 
     float maxDensity = 0.0;
-    for (int z = 0; z < 8; z++)
-    for (int y = 0; y < 8; y++)
-    for (int x = 0; x < 8; x++)
+    for (int sampleZ = 0; sampleZ < 8; sampleZ++)
+    for (int sampleY = 0; sampleY < 8; sampleY++)
+    for (int sampleX = 0; sampleX < 8; sampleX++)
     {
-        maxDensity = max(maxDensity, ReadBlockDensity(minCoord, int3(x, y, z)));
+        maxDensity = max(maxDensity, ReadBlockDensity(minCoord, int3(sampleX, sampleY, sampleZ)));
     }
 
     if (maxDensity <= _IsoLevel)
@@ -493,11 +599,11 @@ void MarchingCubes(uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    for (int z = 1; z < 6; z++)
-    for (int y = 1; y < 6; y++)
-    for (int x = 1; x < 6; x++)
+    for (int cubeZ = 1; cubeZ < 6; cubeZ++)
+    for (int cubeY = 1; cubeY < 6; cubeY++)
+    for (int cubeX = 1; cubeX < 6; cubeX++)
     {
-        int3 mc = int3(x, y, z);
+        int3 mc = int3(cubeX, cubeY, cubeZ);
         int3 gridCell = minCoord + mc;
         int3 ownerKey = gridCell >> 2;
         if ((mc.x < 2 || mc.y < 2 || mc.z < 2) && FindKeyIndex(ownerKey) >= 0)
@@ -534,7 +640,21 @@ void MarchingCubes(uint3 id : SV_DispatchThreadID)
             if (dot(cp, cp) < 1e-12)
                 continue;
 
-            TryAppendTriangle(v0, v1, v2, normalize(cp));
+            float3 faceNormal = normalize(cp);
+            float3 n0 = MatchHemisphere(CalcNormal(minCoord, p0, faceNormal), faceNormal);
+            float3 n1 = MatchHemisphere(CalcNormal(minCoord, p1, faceNormal), faceNormal);
+            float3 n2 = MatchHemisphere(CalcNormal(minCoord, p2, faceNormal), faceNormal);
+            TryAppendTriangle(v0, v1, v2, n0, n1, n2);
         }
     }
+}
+
+[numthreads(1, 1, 1)]
+void BuildDrawArgs(uint3 id : SV_DispatchThreadID)
+{
+    uint vertexCount = min(_Stats[3], (uint)_MaxVertexCount);
+    _DrawArgs[0] = vertexCount;
+    _DrawArgs[1] = 1u;
+    _DrawArgs[2] = 0u;
+    _DrawArgs[3] = 0u;
 }

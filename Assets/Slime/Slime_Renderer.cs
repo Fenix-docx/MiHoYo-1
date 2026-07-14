@@ -87,9 +87,9 @@ namespace Slime
 
         static Material CreateMaterial()
         {
-            var shader = Shader.Find("HDRP/Unlit");
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
             if (shader == null)
-                shader = Shader.Find("Unlit/Color");
+                Debug.LogError("SlimeRenderer: no shader found!");
 
             if (shader != null)
             {
@@ -100,7 +100,7 @@ namespace Slime
                 return mat;
             }
 
-            Debug.LogError("SlimeRenderer: no shader found!");
+
             return null;
         }
 

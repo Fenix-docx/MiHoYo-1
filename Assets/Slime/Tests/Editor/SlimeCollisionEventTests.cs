@@ -16,6 +16,9 @@ namespace Slime.Tests
             NativeArray<float3> oldPositions = new NativeArray<float3>(1, Allocator.TempJob);
             NativeArray<float3> velocities = new NativeArray<float3>(1, Allocator.TempJob);
             NativeArray<SlimeBoxCollider> colliders = new NativeArray<SlimeBoxCollider>(1, Allocator.TempJob);
+            NativeArray<SlimeColliderOctreeNode> colliderOctreeNodes =
+                new NativeArray<SlimeColliderOctreeNode>(0, Allocator.TempJob);
+            NativeArray<int> colliderOctreeIndices = new NativeArray<int>(0, Allocator.TempJob);
             NativeList<SlimeCollisionEvent> events = new NativeList<SlimeCollisionEvent>(4, Allocator.TempJob);
             NativeParallelHashSet<ulong> eventSet = new NativeParallelHashSet<ulong>(4, Allocator.TempJob);
 
@@ -30,6 +33,8 @@ namespace Slime.Tests
                     Ps = particles,
                     PosOld = oldPositions,
                     Colliders = colliders,
+                    ColliderOctreeNodes = colliderOctreeNodes,
+                    ColliderOctreeIndices = colliderOctreeIndices,
                     Velocity = velocities,
                     RecordCollisionEvents = true,
                     CollisionEvents = events.AsParallelWriter(),
@@ -52,6 +57,8 @@ namespace Slime.Tests
             {
                 eventSet.Dispose();
                 events.Dispose();
+                colliderOctreeIndices.Dispose();
+                colliderOctreeNodes.Dispose();
                 colliders.Dispose();
                 velocities.Dispose();
                 oldPositions.Dispose();

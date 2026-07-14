@@ -8,9 +8,10 @@ namespace Slime
     public sealed class SlimeStatusHud : MonoBehaviour
     {
         [SerializeField] SlimeSimulator simulator;
+        [SerializeField] SlimeSurfaceBuilder surfaceBuilder;
         [SerializeField, Min(0.05f)] float refreshInterval = 0.1f;
         [SerializeField] Vector2 panelOffset = new Vector2(22f, -22f);
-        [SerializeField] Vector2 panelSize = new Vector2(350f, 154f);
+        [SerializeField] Vector2 panelSize = new Vector2(430f, 178f);
 
         readonly Image[] _stepSegments = new Image[3];
 
@@ -20,6 +21,7 @@ namespace Slime
         Text _particleText;
         Text _cohesionText;
         Text _detailText;
+        Text _surfaceText;
         float _nextRefreshTime;
 
         static readonly Color PanelColor = new Color(0.03f, 0.04f, 0.05f, 0.72f);
@@ -31,6 +33,7 @@ namespace Slime
         public void Bind(SlimeSimulator target)
         {
             simulator = target;
+            ResolveSurfaceBuilder();
             Build();
             Refresh(force: true);
         }
@@ -40,6 +43,7 @@ namespace Slime
             if (simulator == null)
                 simulator = GetComponentInParent<SlimeSimulator>();
 
+            ResolveSurfaceBuilder();
             Build();
         }
 
@@ -62,6 +66,8 @@ namespace Slime
         {
             if (_canvas != null)
                 return;
+
+            Vector2 resolvedPanelSize = ResolvePanelSize();
 
             _canvas = gameObject.GetComponent<Canvas>();
             if (_canvas == null)
@@ -92,7 +98,7 @@ namespace Slime
             panel.anchorMax = new Vector2(0f, 1f);
             panel.pivot = new Vector2(0f, 1f);
             panel.anchoredPosition = panelOffset;
-            panel.sizeDelta = panelSize;
+            panel.sizeDelta = resolvedPanelSize;
 
             Image panelImage = panel.gameObject.AddComponent<Image>();
             panelImage.color = PanelColor;
@@ -100,26 +106,29 @@ namespace Slime
 
             Font font = ResolveFont();
             _titleText = CreateText("Title", panel, font, 18, FontStyle.Bold, TextColor);
-            SetRect(_titleText.rectTransform, 16f, -12f, panelSize.x - 32f, 24f);
+            SetRect(_titleText.rectTransform, 16f, -12f, resolvedPanelSize.x - 32f, 24f);
 
             _groupText = CreateText("Group", panel, font, 16, FontStyle.Normal, TextColor);
-            SetRect(_groupText.rectTransform, 16f, -42f, panelSize.x - 32f, 24f);
+            SetRect(_groupText.rectTransform, 16f, -42f, resolvedPanelSize.x - 32f, 24f);
 
             _particleText = CreateText("Particles", panel, font, 16, FontStyle.Normal, TextColor);
-            SetRect(_particleText.rectTransform, 16f, -68f, panelSize.x - 32f, 24f);
+            SetRect(_particleText.rectTransform, 16f, -68f, resolvedPanelSize.x - 32f, 24f);
 
             _cohesionText = CreateText("Cohesion", panel, font, 16, FontStyle.Normal, TextColor);
-            SetRect(_cohesionText.rectTransform, 16f, -94f, panelSize.x - 32f, 24f);
+            SetRect(_cohesionText.rectTransform, 16f, -94f, resolvedPanelSize.x - 32f, 24f);
 
             _detailText = CreateText("Details", panel, font, 13, FontStyle.Normal, MutedTextColor);
-            SetRect(_detailText.rectTransform, 16f, -120f, panelSize.x - 32f, 20f);
+            SetRect(_detailText.rectTransform, 16f, -120f, resolvedPanelSize.x - 32f, 20f);
+
+            _surfaceText = CreateText("Surface", panel, font, 12, FontStyle.Normal, MutedTextColor);
+            SetRect(_surfaceText.rectTransform, 16f, -140f, resolvedPanelSize.x - 32f, 20f);
 
             const float segmentWidth = 96f;
             const float segmentGap = 8f;
             for (int i = 0; i < _stepSegments.Length; i++)
             {
                 RectTransform segment = CreateRect("Cohesion Segment " + (i + 1), panel);
-                SetRect(segment, 16f + i * (segmentWidth + segmentGap), -142f, segmentWidth, 8f);
+                SetRect(segment, 16f + i * (segmentWidth + segmentGap), -164f, segmentWidth, 8f);
                 Image image = segment.gameObject.AddComponent<Image>();
                 image.color = SegmentInactiveColor;
                 image.raycastTarget = false;
@@ -132,6 +141,8 @@ namespace Slime
             if (_titleText == null)
                 return;
 
+            ResolveSurfaceBuilder();
+
             if (simulator == null)
             {
                 _titleText.text = "Slime 状态";
@@ -139,6 +150,7 @@ namespace Slime
                 _particleText.text = "粒子 -";
                 _cohesionText.text = "凝聚态 -";
                 _detailText.text = string.Empty;
+                RefreshSurfaceText();
                 SetStepSegment(0);
                 return;
             }
@@ -154,7 +166,53 @@ namespace Slime
             _particleText.text = $"粒子 {controlledParticles}/{totalParticles}";
             _cohesionText.text = $"凝聚态 {StepName(step)} ({step}/3)";
             _detailText.text = $"浓度 {simulator.ControlledConcentration:0.0}    形变 {simulator.ControlledShapeStiffness:0.00}";
+            RefreshSurfaceText();
             SetStepSegment(step);
+        }
+
+        void RefreshSurfaceText()
+        {
+            if (_surfaceText == null)
+                return;
+
+            if (surfaceBuilder == null)
+            {
+                _surfaceText.text = "表面 -";
+                return;
+            }
+
+            string mode = SurfaceModeLabel(surfaceBuilder.SurfaceBuildMode);
+            int blocks = surfaceBuilder.LastMarchingCubeBlockCount;
+            int vertices = surfaceBuilder.LastSurfaceVertexCount;
+            int capacity = surfaceBuilder.LastGpuSurfaceVertexCapacity;
+            string requestedBytes = FormatBytes(surfaceBuilder.LastGpuRequestedVertexReadbackBytes);
+            string usedBytes = FormatBytes(surfaceBuilder.LastGpuUsedVertexReadbackBytes);
+            string pending = surfaceBuilder.HasPendingGpuReadback ? " P" : string.Empty;
+            string directPending = surfaceBuilder.HasPendingGpuDirectStatsReadback ? " DP" : string.Empty;
+            string suppressed = surfaceBuilder.LastGpuReadbackSuppressed ? " S" : string.Empty;
+            string schedule = ScheduleStatusLabel(surfaceBuilder.LastGpuScheduleStatus);
+            string direct = surfaceBuilder.LastGpuDirectDrawSubmitted ? " D" : string.Empty;
+            string pendingAge = surfaceBuilder.HasPendingGpuReadback
+                ? $" A{surfaceBuilder.LastGpuPendingReadbackAgeFrames}"
+                : string.Empty;
+            string generation = surfaceBuilder.LastGpuScheduledReadbackGeneration > 0
+                ? $" G{surfaceBuilder.LastGpuAppliedReadbackGeneration}/{surfaceBuilder.LastGpuScheduledReadbackGeneration}"
+                : string.Empty;
+
+            _surfaceText.text =
+                $"表面 {mode}{pending}{directPending}{suppressed}{direct}{pendingAge}{generation} 调{schedule} 块{blocks} 点{vertices}/{capacity} 读{requestedBytes}({usedBytes}) {surfaceBuilder.LastGpuReadbackLatencyFrames}f";
+        }
+
+        void ResolveSurfaceBuilder()
+        {
+            if (surfaceBuilder != null)
+                return;
+
+            if (simulator != null)
+                surfaceBuilder = simulator.GetComponent<SlimeSurfaceBuilder>();
+
+            if (surfaceBuilder == null)
+                surfaceBuilder = GetComponentInParent<SlimeSurfaceBuilder>();
         }
 
         void SetStepSegment(int activeStep)
@@ -181,6 +239,61 @@ namespace Slime
                 default:
                     return "松散";
             }
+        }
+
+        static string SurfaceModeLabel(SlimeSurfaceBuildMode mode)
+        {
+            switch (mode)
+            {
+                case SlimeSurfaceBuildMode.GpuAsyncReadback:
+                    return "GPU-RB";
+                case SlimeSurfaceBuildMode.Auto:
+                    return "Auto";
+                case SlimeSurfaceBuildMode.GpuDirectRender:
+                    return "GPU-RB";
+                default:
+                    return "CPU";
+            }
+        }
+
+        static string ScheduleStatusLabel(SlimeGpuSurfaceScheduleStatus status)
+        {
+            switch (status)
+            {
+                case SlimeGpuSurfaceScheduleStatus.Scheduled:
+                    return "OK";
+                case SlimeGpuSurfaceScheduleStatus.Unsupported:
+                    return "NO";
+                case SlimeGpuSurfaceScheduleStatus.InvalidInput:
+                    return "IN";
+                case SlimeGpuSurfaceScheduleStatus.PendingReadbackLimit:
+                    return "PR";
+                case SlimeGpuSurfaceScheduleStatus.PendingBufferResizeBlocked:
+                    return "PB";
+                case SlimeGpuSurfaceScheduleStatus.MissingKernel:
+                    return "MK";
+                default:
+                    return "--";
+            }
+        }
+
+        static string FormatBytes(long bytes)
+        {
+            if (bytes <= 0L)
+                return "0B";
+
+            const float kilo = 1024f;
+            const float mega = 1024f * 1024f;
+            return bytes >= mega
+                ? $"{bytes / mega:0.0}MB"
+                : bytes >= kilo
+                    ? $"{bytes / kilo:0.0}KB"
+                    : $"{bytes}B";
+        }
+
+        Vector2 ResolvePanelSize()
+        {
+            return new Vector2(Mathf.Max(430f, panelSize.x), Mathf.Max(178f, panelSize.y));
         }
 
         static RectTransform CreateRect(string objectName, RectTransform parent)

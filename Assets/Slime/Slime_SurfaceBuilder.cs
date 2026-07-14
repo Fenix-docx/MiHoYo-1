@@ -11,15 +11,19 @@ namespace Slime
         Cpu,
         GpuAsyncReadback,
         Auto,
+        GpuDirectRender,
     }
 
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public class SlimeSurfaceBuilder : MonoBehaviour
     {
+        public const string GpuDirectSurfaceShaderName = "Slime/GPU Surface Draw";
+
         [Header("Surface")]
         public Material surfaceMaterial;
         [SerializeField] SlimeSurfaceBuildMode surfaceBuildMode = SlimeSurfaceBuildMode.Cpu;
         [SerializeField] ComputeShader gpuSurfaceComputeShader;
+        [SerializeField] Material gpuDirectSurfaceMaterial;
 
         NativeArray<float> _grid, _gridTemp;
         NativeArray<float> _blurBlockScratch;
@@ -31,6 +35,7 @@ namespace Slime
         Mesh _mesh;
         MeshFilter _mf;
         MeshRenderer _mr;
+        Material _runtimeGpuDirectSurfaceMaterial;
         int _autoOverflowFallbackFramesRemaining;
 
         public Mesh CurrentSurfaceMesh => _mesh;
@@ -40,8 +45,29 @@ namespace Slime
         public SlimeSurfaceBuildMode SurfaceBuildMode => surfaceBuildMode;
         public bool LastGpuSurfaceSupported => _gpuPipeline != null && _gpuPipeline.IsSupported;
         public bool LastGpuSurfaceOverflow => _gpuPipeline != null && _gpuPipeline.LastOverflow;
+        public bool HasPendingGpuReadback => _gpuPipeline != null && _gpuPipeline.HasPendingReadback;
+        public bool HasPendingGpuDirectStatsReadback => _gpuPipeline != null && _gpuPipeline.HasPendingDirectStatsReadback;
+        public SlimeGpuSurfaceScheduleStatus LastGpuScheduleStatus =>
+            _gpuPipeline != null ? _gpuPipeline.LastScheduleStatus : SlimeGpuSurfaceScheduleStatus.NotScheduled;
+        public string LastGpuScheduleFailure => _gpuPipeline != null ? _gpuPipeline.LastScheduleFailure : string.Empty;
+        public bool LastGpuDirectDrawAttempted => _gpuPipeline != null && _gpuPipeline.LastDirectDrawAttempted;
+        public bool LastGpuDirectDrawSubmitted => _gpuPipeline != null && _gpuPipeline.LastDirectDrawSubmitted;
+        public int LastSurfaceVertexCount => _mesh != null ? _mesh.vertexCount : 0;
         public int LastGpuSurfaceVertexCount => _gpuPipeline != null ? _gpuPipeline.LastVertexCount : 0;
+        public int LastGpuSurfaceVertexCapacity => _gpuPipeline != null ? _gpuPipeline.LastVertexBufferCapacity : 0;
+        public long LastGpuRequestedVertexReadbackBytes => _gpuPipeline != null ? _gpuPipeline.LastRequestedVertexReadbackBytes : 0L;
+        public long LastGpuUsedVertexReadbackBytes => _gpuPipeline != null ? _gpuPipeline.LastUsedVertexReadbackBytes : 0L;
         public int LastGpuReadbackLatencyFrames => _gpuPipeline != null ? _gpuPipeline.LastReadbackLatencyFrames : 0;
+        public bool LastGpuReadbackSuppressed => _gpuPipeline != null && _gpuPipeline.LastReadbackSuppressed;
+        public int LastGpuPendingReadbackAgeFrames => _gpuPipeline != null ? _gpuPipeline.PendingReadbackAgeFrames : 0;
+        public int LastGpuScheduledReadbackGeneration => _gpuPipeline != null ? _gpuPipeline.LastScheduledReadbackGeneration : 0;
+        public int LastGpuAppliedReadbackGeneration => _gpuPipeline != null ? _gpuPipeline.LastAppliedReadbackGeneration : 0;
+        public int LastGpuDroppedReadbackGeneration => _gpuPipeline != null ? _gpuPipeline.LastDroppedReadbackGeneration : 0;
+
+        public static bool IsGpuDirectSurfaceShaderName(string shaderName)
+        {
+            return shaderName == GpuDirectSurfaceShaderName;
+        }
 
         void Awake()
         {
@@ -68,27 +94,29 @@ namespace Slime
             if (surfaceBuildMode == SlimeSurfaceBuildMode.Cpu)
             {
                 DiscardPendingGpuReadbacks();
+                _gpuPipeline?.ClearDirectSurface();
                 _autoOverflowFallbackFramesRemaining = 0;
                 BuildSurfaceCpu(particles, isoLevel);
                 return;
             }
 
-            if (_gpuPipeline != null && _gpuPipeline.TryApplyCompletedReadback(_mesh))
-            {
-                LastMarchingCubeBlockCount = _gpuPipeline.LastVisitedBlockCount;
-                LastSkippedMarchingCubeBlockCount = _gpuPipeline.LastSkippedBlockCount;
+            _gpuPipeline?.ClearDirectSurface();
+            TryApplyCompletedGpuReadback();
 
-                if (surfaceBuildMode == SlimeSurfaceBuildMode.Auto)
-                    _autoOverflowFallbackFramesRemaining = _gpuPipeline.LastOverflow ? 1 : 0;
-            }
+            if (ShouldUseGpuReadbackThisFrame() &&
+                _gpuPipeline != null &&
+                _gpuPipeline.HasPendingReadback)
+                return;
 
             NativeArray<int3> keys;
             float3 minPos;
-            if (!PrepareSparseSurfaceData(particles, out keys, out minPos))
+            float3 maxPos;
+            if (!PrepareSparseSurfaceData(particles, out keys, out minPos, out maxPos))
             {
                 LastMarchingCubeBlockCount = 0;
                 LastSkippedMarchingCubeBlockCount = 0;
                 DiscardPendingGpuReadbacks();
+                _gpuPipeline?.ClearDirectSurface();
                 _autoOverflowFallbackFramesRemaining = 0;
                 _mesh.Clear();
                 keys.Dispose();
@@ -98,10 +126,11 @@ namespace Slime
             try
             {
                 bool scheduledGpu = ShouldUseGpuThisFrame() &&
-                                    TryBuildSurfaceGpuAsync(particles, keys, minPos, isoLevel);
+                                    TryBuildSurfaceGpu(particles, keys, minPos, maxPos, isoLevel);
 
                 if (!scheduledGpu)
                 {
+                    _gpuPipeline?.ClearDirectSurface();
                     BuildSurfaceCpuPrepared(particles, keys, minPos, isoLevel);
                     DiscardPendingGpuReadbacks();
 
@@ -127,9 +156,22 @@ namespace Slime
                     return true;
                 case SlimeSurfaceBuildMode.Auto:
                     return _autoOverflowFallbackFramesRemaining <= 0;
+                case SlimeSurfaceBuildMode.GpuDirectRender:
+                    return true;
                 default:
                     return false;
             }
+        }
+
+        bool ShouldUseGpuReadbackThisFrame()
+        {
+            if (_gpuPipeline == null || !_gpuPipeline.IsSupported)
+                return false;
+
+            return surfaceBuildMode == SlimeSurfaceBuildMode.GpuAsyncReadback ||
+                   surfaceBuildMode == SlimeSurfaceBuildMode.GpuDirectRender ||
+                   (surfaceBuildMode == SlimeSurfaceBuildMode.Auto &&
+                    _autoOverflowFallbackFramesRemaining <= 0);
         }
 
         void DiscardPendingGpuReadbacks()
@@ -137,25 +179,49 @@ namespace Slime
             _gpuPipeline?.DiscardPendingReadbacks();
         }
 
-        bool TryBuildSurfaceGpuAsync(
+        bool TryApplyCompletedGpuReadback()
+        {
+            if (_gpuPipeline == null || !_gpuPipeline.TryApplyCompletedReadback(_mesh))
+                return false;
+
+            LastMarchingCubeBlockCount = _gpuPipeline.LastVisitedBlockCount;
+            LastSkippedMarchingCubeBlockCount = _gpuPipeline.LastSkippedBlockCount;
+
+            if (surfaceBuildMode == SlimeSurfaceBuildMode.Auto)
+                _autoOverflowFallbackFramesRemaining = _gpuPipeline.LastOverflow ? 1 : 0;
+
+            return true;
+        }
+
+        bool TryBuildSurfaceGpu(
             NativeArray<SlimeParticle> particles,
             NativeArray<int3> keys,
             float3 minPos,
+            float3 maxPos,
             float isoLevel)
         {
             return _gpuPipeline != null &&
                    _gpuPipeline.IsSupported &&
-                   _gpuPipeline.TrySchedule(particles, keys, _gridLut, minPos, isoLevel);
+                   _gpuPipeline.TrySchedule(
+                       particles,
+                       keys,
+                       _gridLut,
+                       minPos,
+                       maxPos,
+                       isoLevel,
+                       requestReadback: true);
         }
 
         bool PrepareSparseSurfaceData(
             NativeArray<SlimeParticle> particles,
             out NativeArray<int3> keys,
-            out float3 minPos)
+            out float3 minPos,
+            out float3 maxPos)
         {
             // 1. Bounds
             new SlimeDensityField.CalcBoundsJob { Ps = particles, Bounds = _bounds }.Schedule().Complete();
             minPos = _bounds[0];
+            maxPos = _bounds[1];
 
             // 2. Clear (IJob, single-threaded)
             new SlimeDensityField.ClearGridJob { Grid = _grid }.Schedule().Complete();
@@ -176,7 +242,8 @@ namespace Slime
         {
             NativeArray<int3> keys;
             float3 minPos;
-            if (!PrepareSparseSurfaceData(particles, out keys, out minPos))
+            float3 maxPos;
+            if (!PrepareSparseSurfaceData(particles, out keys, out minPos, out maxPos))
             {
                 LastMarchingCubeBlockCount = 0;
                 LastSkippedMarchingCubeBlockCount = 0;
@@ -264,10 +331,57 @@ namespace Slime
 
         void LateUpdate()
         {
+            if (surfaceBuildMode != SlimeSurfaceBuildMode.Cpu)
+                TryApplyCompletedGpuReadback();
+
             // Phase B: particles and surface are rendered in simulation/world space.
             // Do not let the GameObject Transform move the reconstructed surface.
             if (_mesh && _mesh.vertexCount > 0 && surfaceMaterial)
                 Graphics.DrawMesh(_mesh, Matrix4x4.identity, surfaceMaterial, gameObject.layer);
+        }
+
+        Material ResolveGpuDirectSurfaceMaterial()
+        {
+            if (IsGpuDirectSurfaceMaterial(gpuDirectSurfaceMaterial))
+                return gpuDirectSurfaceMaterial;
+
+            if (IsGpuDirectSurfaceMaterial(_runtimeGpuDirectSurfaceMaterial))
+                return _runtimeGpuDirectSurfaceMaterial;
+
+            Shader shader = Shader.Find(GpuDirectSurfaceShaderName);
+            if (shader == null)
+                return null;
+
+            _runtimeGpuDirectSurfaceMaterial = new Material(shader)
+            {
+                name = "Slime GPU Surface Runtime",
+            };
+
+            if (surfaceMaterial)
+                CopyDirectSurfaceProperties(_runtimeGpuDirectSurfaceMaterial, surfaceMaterial);
+
+            return _runtimeGpuDirectSurfaceMaterial;
+        }
+
+        static bool IsGpuDirectSurfaceMaterial(Material material)
+        {
+            return material != null &&
+                   material.shader != null &&
+                   IsGpuDirectSurfaceShaderName(material.shader.name);
+        }
+
+        static void CopyDirectSurfaceProperties(Material target, Material source)
+        {
+            if (target == null || source == null)
+                return;
+
+            if (source.HasProperty("_BaseColor") && target.HasProperty("_BaseColor"))
+                target.SetColor("_BaseColor", source.GetColor("_BaseColor"));
+            else if (source.HasProperty("_Color") && target.HasProperty("_BaseColor"))
+                target.SetColor("_BaseColor", source.GetColor("_Color"));
+
+            if (source.HasProperty("_Opacity") && target.HasProperty("_Opacity"))
+                target.SetFloat("_Opacity", source.GetFloat("_Opacity"));
         }
 
         void OnDestroy()
@@ -282,6 +396,7 @@ namespace Slime
             if (_gridLut.IsCreated) _gridLut.Dispose();
             if (_bounds.IsCreated) _bounds.Dispose();
             if (_mesh) Destroy(_mesh);
+            if (_runtimeGpuDirectSurfaceMaterial) Destroy(_runtimeGpuDirectSurfaceMaterial);
         }
     }
 }

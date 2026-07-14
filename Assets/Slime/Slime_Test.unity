@@ -184,7 +184,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -296,7 +296,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -721,7 +721,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -814,7 +814,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InputManager
   jumpKey: 32
   interactKey: 101
-  inputEnable: 1
+  inputEnable: 0
 --- !u!1 &1239110067
 GameObject:
   m_ObjectHideFlags: 0
@@ -880,7 +880,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1231,7 +1231,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1343,7 +1343,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1455,7 +1455,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1567,7 +1567,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1614,67 +1614,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &1762406154
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -0.93838423
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: -0.099999964
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -3.5685914
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0.00000003774895
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_Name
-      value: texture_v128_online_moved
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 0f721506f0913a846bc8001586504c3e, type: 3}
 --- !u!114 &1763104530 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6518334405593590982, guid: ead021b4177b07c439c1c754d5b6f06e, type: 3}
@@ -1756,7 +1695,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -3803327611475202799, guid: e7d4c5ce0bcf6934ea5bb1f06b4cec9d, type: 3}
+  - {fileID: 2100000, guid: 9b53fbb225f2dbc4397bf9fe74765289, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1813,11 +1752,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5629737125610348080, guid: b1f76d35e8ed8314a83034b38234c434, type: 3}
       propertyPath: jumpSound
-      value: 
+      value:
       objectReference: {fileID: 8300000, guid: 83c109d07888c3e45aa571c1789119c2, type: 3}
     - target: {fileID: 5629737125610348080, guid: b1f76d35e8ed8314a83034b38234c434, type: 3}
       propertyPath: splitSound
-      value: 
+      value:
       objectReference: {fileID: 8300000, guid: b3539b9bed050214dad82c5fcdd1b04c, type: 3}
     - target: {fileID: 5629737125610348080, guid: b1f76d35e8ed8314a83034b38234c434, type: 3}
       propertyPath: movementSound
@@ -1896,6 +1835,22 @@ PrefabInstance:
       propertyPath: surfaceMaterial
       value: 
       objectReference: {fileID: 2100000, guid: f982a5175fa0471cb48aae81f8f2d0e4, type: 2}
+    - target: {fileID: 4029271358927423857, guid: ead021b4177b07c439c1c754d5b6f06e, type: 3}
+      propertyPath: surfaceBuildMode
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4029271358927423857, guid: ead021b4177b07c439c1c754d5b6f06e, type: 3}
+      propertyPath: gpuSurfaceComputeShader
+      value:
+      objectReference: {fileID: 7200000, guid: 163450f42aa044b3809f231f6d6493a8, type: 3}
+    - target: {fileID: 4029271358927423857, guid: ead021b4177b07c439c1c754d5b6f06e, type: 3}
+      propertyPath: maxGpuReadbackAgeFrames
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4029271358927423857, guid: ead021b4177b07c439c1c754d5b6f06e, type: 3}
+      propertyPath: gpuDirectSurfaceMaterial
+      value:
+      objectReference: {fileID: 2100000, guid: 5e4233ed89374c18ac406ebdc8fb9702, type: 2}
     - target: {fileID: 4243310264606472734, guid: ead021b4177b07c439c1c754d5b6f06e, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.1
@@ -1963,7 +1918,6 @@ SceneRoots:
   m_Roots:
   - {fileID: 939962730}
   - {fileID: 1589934251}
-  - {fileID: 1762406154}
   - {fileID: 1691534854}
   - {fileID: 930609116}
   - {fileID: 1239110071}
