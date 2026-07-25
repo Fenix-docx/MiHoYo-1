@@ -23,27 +23,31 @@ namespace Slime
         [Range(0f, 50f)] public float viscosityStrength = 1f;
         [Range(0.01f, 50f)] public float concentration = 10f;
         [Min(16)] public int initialParticleCount = SlimeConst.Num;
-
-        [Header("Phase 2 – Shape Matching")]
+        /// <summary>
+        /// 形状约束
+        /// </summary>
+        [Header("Shape Matching")]
         public bool enableShapeMatch = false;
         [Range(0f, 1f)] public float shapeStiffness = 0.15f;
-
+        /// <summary>
+        /// 形状目标（静态网格）
+        /// </summary>
         [Header("Static Mesh Shape Target")]
         public bool enableMeshShapeTarget = false;
         public GameObject shapeTargetObject;
         public Mesh shapeTargetMesh;
         public Transform shapeTargetTransform;
         [Range(0f, 1f)] public float shapeTargetStrength = 0.12f;
-        [Min(0f)] public float shapeTargetCompliance = 0.0005f;
-        [Range(0f, 1f)] public float shapeBoundaryStrength = 0.85f;
+        [Min(0f)] public float shapeTargetCompliance = 0.0005f;//形状目标compliance，用于调整形状目标的刚度
+        [Range(0f, 1f)] public float shapeBoundaryStrength = 0.85f;//形状边界强度，用于调整形状边界的影响
         [Range(6, 48)] public int shapeSdfResolution = 24;
         [Min(0f)] public float shapeMorphTime = 0.35f;
 
-        [Header("Phase 3 – Surface")]
+        [Header("Surface")]
         public bool enableSurface = true;
         [Range(0.1f, 5f)] public float isoLevel = 1.0f;
 
-        [Header("Phase 4 – Interaction")]
+        [Header("Interaction")]
         [Tooltip("Velocity source the slime follows (e.g. a SlimeControllerMotor's Rigidbody). Auto-found if left empty.")]
         public Rigidbody controllerBody;
         [Range(0f, 1f)] public float velocityFollowGain = 0.5f;
@@ -65,46 +69,46 @@ namespace Slime
         public SlimeCollisionUnityEvent onSlimeCollision = new SlimeCollisionUnityEvent();
         public event Action<SlimeCollisionEventData> OnSlimeCollision;
 
-        [Obsolete("Use onSlimeCollision.")]
-        public SlimeCollisionUnityEvent onParticleCollision => onSlimeCollision;
+        // [Obsolete("Use onSlimeCollision.")]
+        // public SlimeCollisionUnityEvent onParticleCollision => onSlimeCollision;
 
-        [Obsolete("Use OnSlimeCollision.")]
-        public event Action<SlimeCollisionEventData> OnParticleCollision
-        {
-            add => OnSlimeCollision += value;
-            remove => OnSlimeCollision -= value;
-        }
+        // [Obsolete("Use OnSlimeCollision.")]
+        // public event Action<SlimeCollisionEventData> OnParticleCollision
+        // {
+        //     add => OnSlimeCollision += value;
+        //     remove => OnSlimeCollision -= value;
+        // }
 
         [Header("Split Events")]
         public UnityEvent onSlimeSplit = new UnityEvent();
         public event Action OnSlimeSplit;
 
-        [Header("Core-driven locomotion")]
-        [Tooltip("Only particles within this sim-space radius of the blob COM receive the controller pull force. 0 = apply to all (legacy).")]
-        [Range(0f, 5f)] public float moveCoreRadius = 1.5f;
+        [Header("核心驱动")]
+        [Tooltip("驱动作用半径，用于调整核心驱动的影响范围")]
+        [Range(0f, 5f)] public float moveCoreRadius = 1.5f;//核心驱动半径，用于调整核心驱动的影响范围
 
         [Header("Split / Absorb")]
-        [Tooltip("Fraction of the controlled body peeled off on each split (0.1 = 10% of particles).")]
+        [Tooltip("每次分割时，控制体被剥去的粒子比例（0.1 = 10% of粒子）")]
         [Range(0.05f, 0.5f)] public float splitFraction = 0.25f;
-        [Tooltip("One-time sim-space offset the split body is placed ahead along the facing direction. Separates the bodies cleanly with no impulse (no drift / continuous force).")]
+        [Tooltip("分裂体的位置偏移")]
         [Min(0f)] public float splitSeparation = 5f;
-        [Tooltip("Minimum particles a body must keep / peel to allow a split.")]
+        [Tooltip("个体必须维持的最小粒子数")]
         [Min(16)] public int minParticlesToSplit = 128;
-        [Tooltip("Extra sim-space slack beyond the two bodies' radii for absorb contact to trigger.")]
+        [Tooltip("触发吸收的接触距离阈值（单位：模拟空间）")]
         [Min(0f)] public float absorbContactSlack = 0.5f;
-        [Tooltip("Seconds after a split during which absorb is disabled, so the ejection can separate the bodies.")]
+        [Tooltip("分裂后需等待一段时间才能吸收（单位：秒）")]
         [Min(0f)] public float absorbCooldownTime = 0.5f;
-        [Tooltip("Extra distance beyond contact threshold a split pair must reach before it can absorb again.")]
+        [Tooltip("分裂后需等待一段时间才能吸收的额外距离阈值（单位：模拟空间）")]
         [Min(0f)] public float absorbRearmSlack = 1f;
-        [Tooltip("Key to split the controlled body. Facing direction comes from the main camera.")]
+        [Tooltip("分裂控制键")]
         public KeyCode keySplit = KeyCode.F;
-        [Tooltip("Key to cycle control between split bodies.")]
+        [Tooltip("控制权切换键")]
         public KeyCode keySwitchControl = KeyCode.Tab;
 
         [Header("Keyboard")]
-        public KeyCode keyDecreaseBoth = KeyCode.LeftBracket;
-        public KeyCode keyIncreaseBoth = KeyCode.RightBracket;
-        [Range(0.1f, 20f)] public float concentrationStep = 4f;
+        public KeyCode keyDecreaseBoth = KeyCode.Q;//用于减少凝聚力和刚度的按键
+        public KeyCode keyIncreaseBoth = KeyCode.E;//用于增加凝聚力和刚度的按键
+        [Range(0.1f, 20f)] public float concentrationStep = 4f;//凝聚的步长，用于调整凝聚的步长
         [Range(0.01f, 0.2f)] public float stiffnessStep = 0.05f;
         [Range(1, 3)] public int currentstep = 1; //凝聚的阶段，公开出来方便做可视化
 
@@ -177,7 +181,7 @@ namespace Slime
             if (simulateOnStart)
                 Initialise();
             EnsureStatusHud();
-        }
+        } 
 
         void Update()
         {
