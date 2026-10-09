@@ -1,0 +1,2 @@
+REPORT_APPEND: original 36931 bytes preserved; section 8 appended
+PROTECTED_FILES: 150 other files unchanged

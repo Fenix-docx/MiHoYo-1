@@ -1,0 +1,451 @@
+﻿MM .gitignore
+ M Assets/Audio.meta
+ M Assets/Audio/音效.meta
+ M Assets/Audio/音效/史莱姆分裂.mp3.meta
+ M Assets/Audio/音效/史莱姆吞噬.mp3.meta
+ M Assets/Audio/音效/史莱姆碰撞.mp3.meta
+ M Assets/Audio/音效/史莱姆移动.mp3.meta
+ M Assets/Audio/音效/史莱姆跳跃.mp3.meta
+ M Assets/Audio/音效/失败.mp3.meta
+ M Assets/Audio/音效/得分.mp3.meta
+ M Assets/Audio/音效/机关触发.mp3.meta
+ M Assets/Audio/音效/石门打开.mp3.meta
+ M Assets/Audio/音效/胜利.mp3.meta
+A  Assets/Belle.meta
+AD "Assets/Belle/Avatar_Female_Size02_Belle_MainCity (merge) 1.mat"
+AD "Assets/Belle/Avatar_Female_Size02_Belle_MainCity (merge) 1.mat.meta"
+AD "Assets/Belle/Avatar_Female_Size02_Belle_MainCity (merge) 2.mat"
+AD "Assets/Belle/Avatar_Female_Size02_Belle_MainCity (merge) 2.mat.meta"
+A  "Assets/Belle/Avatar_Female_Size02_Belle_MainCity (merge).fbx"
+A  "Assets/Belle/Avatar_Female_Size02_Belle_MainCity (merge).fbx.meta"
+AD "Assets/Belle/Avatar_Female_Size02_Belle_MainCity (merge).mat"
+AD "Assets/Belle/Avatar_Female_Size02_Belle_MainCity (merge).mat.meta"
+A  Assets/Belle/Belle.controller
+A  Assets/Belle/Belle.controller.meta
+A  Assets/Belle/Belle_Body_Map1_D.png
+A  Assets/Belle/Belle_Body_Map1_D.png.meta
+A  Assets/Belle/Belle_Body_Map1_M.png
+A  Assets/Belle/Belle_Body_Map1_M.png.meta
+A  Assets/Belle/Belle_Body_Map1_N.png
+AM Assets/Belle/Belle_Body_Map1_N.png.meta
+A  Assets/Belle/Belle_Body_Map2_D.png
+A  Assets/Belle/Belle_Body_Map2_D.png.meta
+A  Assets/Belle/Belle_Body_Map2_M.png
+A  Assets/Belle/Belle_Body_Map2_M.png.meta
+A  Assets/Belle/Belle_Body_Map2_N.png
+A  Assets/Belle/Belle_Body_Map2_N.png.meta
+A  Assets/Belle/Belle_Face_D.png
+A  Assets/Belle/Belle_Face_D.png.meta
+A  Assets/Belle/Belle_M.prefab
+A  Assets/Belle/Belle_M.prefab.meta
+A  Assets/Belle/Beller'sAnimation.meta
+A  "Assets/Belle/Beller'sAnimation/Fast Run.fbx"
+A  "Assets/Belle/Beller'sAnimation/Fast Run.fbx.meta"
+A  "Assets/Belle/Beller'sAnimation/Female Start Walking.fbx"
+A  "Assets/Belle/Beller'sAnimation/Female Start Walking.fbx.meta"
+A  "Assets/Belle/Beller'sAnimation/Female Stop.fbx"
+A  "Assets/Belle/Beller'sAnimation/Female Stop.fbx.meta"
+A  Assets/Belle/Beller'sAnimation/Idle.fbx
+A  Assets/Belle/Beller'sAnimation/Idle.fbx.meta
+A  "Assets/Belle/Beller'sAnimation/Slow Run.fbx"
+A  "Assets/Belle/Beller'sAnimation/Slow Run.fbx.meta"
+A  Assets/Belle/Beller'sAnimation/Walking.fbx
+A  Assets/Belle/Beller'sAnimation/Walking.fbx.meta
+A  Assets/Belle/Eff_Noise_01.png
+A  Assets/Belle/Eff_Noise_01.png.meta
+A  Assets/Belle/Famale_Face_lightmap.png
+A  Assets/Belle/Famale_Face_lightmap.png.meta
+A  "Assets/Belle/New Animator Controller.controller"
+A  "Assets/Belle/New Animator Controller.controller.meta"
+AD Assets/Belle/newAnimation.meta
+ M Assets/DefaultVolumeProfile.asset
+ D "Assets/New Custom Universal Renderer Data.asset"
+ D "Assets/New Custom Universal Renderer Data.asset.meta"
+ D "Assets/New Universal Render Pipeline Asset.asset"
+ D "Assets/New Universal Render Pipeline Asset.asset.meta"
+ D "Assets/New Universal Render Pipeline Asset_Renderer.asset"
+ D "Assets/New Universal Render Pipeline Asset_Renderer.asset.meta"
+ M Assets/Shaders.meta
+A  Assets/Slime/Audio.meta
+A  Assets/Slime/Audio/音效.meta
+A  Assets/Slime/Audio/音效/史莱姆分裂.mp3
+A  Assets/Slime/Audio/音效/史莱姆分裂.mp3.meta
+A  Assets/Slime/Audio/音效/史莱姆吞噬.mp3
+A  Assets/Slime/Audio/音效/史莱姆吞噬.mp3.meta
+A  Assets/Slime/Audio/音效/史莱姆碰撞.mp3
+A  Assets/Slime/Audio/音效/史莱姆碰撞.mp3.meta
+A  Assets/Slime/Audio/音效/史莱姆移动.mp3
+A  Assets/Slime/Audio/音效/史莱姆移动.mp3.meta
+A  Assets/Slime/Audio/音效/史莱姆跳跃.mp3
+A  Assets/Slime/Audio/音效/史莱姆跳跃.mp3.meta
+A  Assets/Slime/Audio/音效/失败.mp3
+A  Assets/Slime/Audio/音效/失败.mp3.meta
+A  Assets/Slime/Audio/音效/得分.mp3
+A  Assets/Slime/Audio/音效/得分.mp3.meta
+A  Assets/Slime/Audio/音效/机关触发.mp3
+A  Assets/Slime/Audio/音效/机关触发.mp3.meta
+A  Assets/Slime/Audio/音效/石门打开.mp3
+A  Assets/Slime/Audio/音效/石门打开.mp3.meta
+A  Assets/Slime/Audio/音效/胜利.mp3
+A  Assets/Slime/Audio/音效/胜利.mp3.meta
+A  Assets/Slime/Scripts.meta
+R  Assets/Slime/CameraFollow_Slime.cs -> Assets/Slime/Scripts/CameraFollow_Slime.cs
+R  Assets/Slime/CameraFollow_Slime.cs.meta -> Assets/Slime/Scripts/CameraFollow_Slime.cs.meta
+R  Assets/Slime/SlimeAudioContactEvent.cs -> Assets/Slime/Scripts/SlimeAudioContactEvent.cs
+R  Assets/Slime/SlimeAudioContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeAudioContactEvent.cs.meta
+R  Assets/Slime/SlimeBlinkAppearContactEvent.cs -> Assets/Slime/Scripts/SlimeBlinkAppearContactEvent.cs
+R  Assets/Slime/SlimeBlinkAppearContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeBlinkAppearContactEvent.cs.meta
+R  Assets/Slime/SlimeBlinkSequenceControllerContactEvent.cs -> Assets/Slime/Scripts/SlimeBlinkSequenceControllerContactEvent.cs
+R  Assets/Slime/SlimeBlinkSequenceControllerContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeBlinkSequenceControllerContactEvent.cs.meta
+R  Assets/Slime/SlimeCheckpointManager.cs -> Assets/Slime/Scripts/SlimeCheckpointManager.cs
+R  Assets/Slime/SlimeCheckpointManager.cs.meta -> Assets/Slime/Scripts/SlimeCheckpointManager.cs.meta
+R  Assets/Slime/SlimeCheckpointZone.cs -> Assets/Slime/Scripts/SlimeCheckpointZone.cs
+R  Assets/Slime/SlimeCheckpointZone.cs.meta -> Assets/Slime/Scripts/SlimeCheckpointZone.cs.meta
+R  Assets/Slime/SlimeContactEventHandler.cs -> Assets/Slime/Scripts/SlimeContactEventHandler.cs
+R  Assets/Slime/SlimeContactEventHandler.cs.meta -> Assets/Slime/Scripts/SlimeContactEventHandler.cs.meta
+R  Assets/Slime/SlimeDoorSwitchOnContact.cs -> Assets/Slime/Scripts/SlimeDoorSwitchOnContact.cs
+R  Assets/Slime/SlimeDoorSwitchOnContact.cs.meta -> Assets/Slime/Scripts/SlimeDoorSwitchOnContact.cs.meta
+R  Assets/Slime/SlimeDoorVisibilityContactEvent.cs -> Assets/Slime/Scripts/SlimeDoorVisibilityContactEvent.cs
+R  Assets/Slime/SlimeDoorVisibilityContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeDoorVisibilityContactEvent.cs.meta
+R  Assets/Slime/SlimeGeometryCheckpointManager.cs -> Assets/Slime/Scripts/SlimeGeometryCheckpointManager.cs
+R  Assets/Slime/SlimeGeometryCheckpointManager.cs.meta -> Assets/Slime/Scripts/SlimeGeometryCheckpointManager.cs.meta
+R  Assets/Slime/SlimeGeometryCheckpointZone.cs -> Assets/Slime/Scripts/SlimeGeometryCheckpointZone.cs
+R  Assets/Slime/SlimeGeometryCheckpointZone.cs.meta -> Assets/Slime/Scripts/SlimeGeometryCheckpointZone.cs.meta
+R  Assets/Slime/SlimeGeometryRespawnAtCheckpointContactEvent.cs -> Assets/Slime/Scripts/SlimeGeometryRespawnAtCheckpointContactEvent.cs
+R  Assets/Slime/SlimeGeometryRespawnAtCheckpointContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeGeometryRespawnAtCheckpointContactEvent.cs.meta
+R  Assets/Slime/SlimeGpuSurfacePipeline.cs -> Assets/Slime/Scripts/SlimeGpuSurfacePipeline.cs
+R  Assets/Slime/SlimeGpuSurfacePipeline.cs.meta -> Assets/Slime/Scripts/SlimeGpuSurfacePipeline.cs.meta
+R  Assets/Slime/SlimeGroupManager.cs -> Assets/Slime/Scripts/SlimeGroupManager.cs
+R  Assets/Slime/SlimeGroupManager.cs.meta -> Assets/Slime/Scripts/SlimeGroupManager.cs.meta
+R  Assets/Slime/SlimeInteractionTestSceneBuilder.cs -> Assets/Slime/Scripts/SlimeInteractionTestSceneBuilder.cs
+R  Assets/Slime/SlimeInteractionTestSceneBuilder.cs.meta -> Assets/Slime/Scripts/SlimeInteractionTestSceneBuilder.cs.meta
+R  Assets/Slime/SlimeMoveContactEvent.cs -> Assets/Slime/Scripts/SlimeMoveContactEvent.cs
+R  Assets/Slime/SlimeMoveContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeMoveContactEvent.cs.meta
+RM Assets/Slime/SlimePermanentDoorOpenContactEvent.cs -> Assets/Slime/Scripts/SlimePermanentDoorOpenContactEvent.cs
+R  Assets/Slime/SlimePermanentDoorOpenContactEvent.cs.meta -> Assets/Slime/Scripts/SlimePermanentDoorOpenContactEvent.cs.meta
+R  Assets/Slime/SlimeRespawnAtCheckpointContactEvent.cs -> Assets/Slime/Scripts/SlimeRespawnAtCheckpointContactEvent.cs
+R  Assets/Slime/SlimeRespawnAtCheckpointContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeRespawnAtCheckpointContactEvent.cs.meta
+R  Assets/Slime/SlimeRotateContactEvent.cs -> Assets/Slime/Scripts/SlimeRotateContactEvent.cs
+R  Assets/Slime/SlimeRotateContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeRotateContactEvent.cs.meta
+R  Assets/Slime/SlimeSettlementZone.cs -> Assets/Slime/Scripts/SlimeSettlementZone.cs
+R  Assets/Slime/SlimeSettlementZone.cs.meta -> Assets/Slime/Scripts/SlimeSettlementZone.cs.meta
+R  Assets/Slime/SlimeStatusHud.cs -> Assets/Slime/Scripts/SlimeStatusHud.cs
+R  Assets/Slime/SlimeStatusHud.cs.meta -> Assets/Slime/Scripts/SlimeStatusHud.cs.meta
+R  Assets/Slime/SlimeSurfaceContactUtility.cs -> Assets/Slime/Scripts/SlimeSurfaceContactUtility.cs
+R  Assets/Slime/SlimeSurfaceContactUtility.cs.meta -> Assets/Slime/Scripts/SlimeSurfaceContactUtility.cs.meta
+R  Assets/Slime/SlimeVisibilitySwapContactEvent.cs -> Assets/Slime/Scripts/SlimeVisibilitySwapContactEvent.cs
+R  Assets/Slime/SlimeVisibilitySwapContactEvent.cs.meta -> Assets/Slime/Scripts/SlimeVisibilitySwapContactEvent.cs.meta
+R  Assets/Slime/Slime_CohesionJobs.cs -> Assets/Slime/Scripts/Slime_CohesionJobs.cs
+R  Assets/Slime/Slime_CohesionJobs.cs.meta -> Assets/Slime/Scripts/Slime_CohesionJobs.cs.meta
+R  Assets/Slime/Slime_CollisionEventData.cs -> Assets/Slime/Scripts/Slime_CollisionEventData.cs
+R  Assets/Slime/Slime_CollisionEventData.cs.meta -> Assets/Slime/Scripts/Slime_CollisionEventData.cs.meta
+R  Assets/Slime/Slime_Constants.cs -> Assets/Slime/Scripts/Slime_Constants.cs
+R  Assets/Slime/Slime_Constants.cs.meta -> Assets/Slime/Scripts/Slime_Constants.cs.meta
+RM Assets/Slime/Slime_ControllerMotor.cs -> Assets/Slime/Scripts/Slime_ControllerMotor.cs
+R  Assets/Slime/Slime_ControllerMotor.cs.meta -> Assets/Slime/Scripts/Slime_ControllerMotor.cs.meta
+R  Assets/Slime/Slime_DensityField.cs -> Assets/Slime/Scripts/Slime_DensityField.cs
+R  Assets/Slime/Slime_DensityField.cs.meta -> Assets/Slime/Scripts/Slime_DensityField.cs.meta
+R  Assets/Slime/Slime_MarchingCubes.cs -> Assets/Slime/Scripts/Slime_MarchingCubes.cs
+R  Assets/Slime/Slime_MarchingCubes.cs.meta -> Assets/Slime/Scripts/Slime_MarchingCubes.cs.meta
+R  Assets/Slime/Slime_Particle.cs -> Assets/Slime/Scripts/Slime_Particle.cs
+R  Assets/Slime/Slime_Particle.cs.meta -> Assets/Slime/Scripts/Slime_Particle.cs.meta
+R  Assets/Slime/Slime_Renderer.cs -> Assets/Slime/Scripts/Slime_Renderer.cs
+R  Assets/Slime/Slime_Renderer.cs.meta -> Assets/Slime/Scripts/Slime_Renderer.cs.meta
+R  Assets/Slime/Slime_ShapeTarget.cs -> Assets/Slime/Scripts/Slime_ShapeTarget.cs
+R  Assets/Slime/Slime_ShapeTarget.cs.meta -> Assets/Slime/Scripts/Slime_ShapeTarget.cs.meta
+R  Assets/Slime/Slime_SimulationJobs.cs -> Assets/Slime/Scripts/Slime_SimulationJobs.cs
+R  Assets/Slime/Slime_SimulationJobs.cs.meta -> Assets/Slime/Scripts/Slime_SimulationJobs.cs.meta
+R  Assets/Slime/Slime_Simulator.cs -> Assets/Slime/Scripts/Slime_Simulator.cs
+R  Assets/Slime/Slime_Simulator.cs.meta -> Assets/Slime/Scripts/Slime_Simulator.cs.meta
+R  Assets/Slime/Slime_SurfaceBuilder.cs -> Assets/Slime/Scripts/Slime_SurfaceBuilder.cs
+R  Assets/Slime/Slime_SurfaceBuilder.cs.meta -> Assets/Slime/Scripts/Slime_SurfaceBuilder.cs.meta
+ D "Assets/Slime/Slime_Greybox 1.unity"
+ D "Assets/Slime/Slime_Greybox 1.unity.meta"
+ D "Assets/Slime/Slime_Greybox 2.unity"
+ D "Assets/Slime/Slime_Greybox 2.unity.meta"
+MM Assets/Slime/Slime_Test.unity
+ D Assets/Slime/Slime__level2.unity
+ D Assets/Slime/Slime__level2.unity.meta
+ D Assets/Slime/Tests.meta
+ D Assets/Slime/Tests/Editor.meta
+ D Assets/Slime/Tests/Editor/SlimeCheckpointTests.cs
+ D Assets/Slime/Tests/Editor/SlimeCheckpointTests.cs.meta
+ D Assets/Slime/Tests/Editor/SlimeCollisionEventTests.cs
+ D Assets/Slime/Tests/Editor/SlimeCollisionEventTests.cs.meta
+ D Assets/Slime/Tests/Editor/SlimeShapeTargetTests.cs
+ D Assets/Slime/Tests/Editor/SlimeShapeTargetTests.cs.meta
+ D Assets/Slime/Tests/Editor/SlimeSplitTests.cs
+ D Assets/Slime/Tests/Editor/SlimeSplitTests.cs.meta
+ D Assets/Slime/Tests/Editor/SlimeSurfaceBuilderTests.cs
+ D Assets/Slime/Tests/Editor/SlimeSurfaceBuilderTests.cs.meta
+ M Assets/UniversalRenderPipelineGlobalSettings.asset
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M ProjectSettings/GraphicsSettings.asset
+ M ProjectSettings/ProjectSettings.asset
+ M ProjectSettings/ProjectVersion.txt
+ M ProjectSettings/TagManager.asset
+?? .dsh-scratch/codex-review/A-core-motion.md
+?? .dsh-scratch/codex-review/B-coordination-gooey.md
+?? .dsh-scratch/codex-review/C-navigation-integration.md
+?? .dsh-scratch/gooey-fix/gooey-aligned-2.png
+?? .dsh-scratch/gooey-fix/gooey-aligned-play.png
+?? .dsh-scratch/gooey-fix/gooey-aligned.png
+?? .dsh-scratch/gooey-fix/gooey-before.png
+?? .dsh-scratch/gooey-fix/gooey-far-verified.png
+?? .dsh-scratch/gooey-fix/gooey-far.png
+?? .dsh-scratch/gooey-fix/gooey-final-fusion.png
+?? .dsh-scratch/gooey-fix/gooey-near-colour.png
+?? .dsh-scratch/gooey-fix/gooey-near.png
+?? .dsh-scratch/gooey-fix/gooey-original-images.png
+?? .dsh-scratch/gooey-fix/gooey-same-positions-no-fusion.png
+?? .dsh-scratch/gooey-fix/gooey-separate-alignment.png
+?? .dsh-scratch/gooey-fix/verification.md
+?? .dsh-scratch/gooey-proof/proof.html
+?? .dsh-scratch/unity-mcp.ps1
+?? .dsh-vision-router/artifacts/.runs/.vision-run-mutay62x-ee450843-ef4a-4a2d-9301-8e79c382dea5/E--Projects_Unity-MiHoYo-.dsh-vi-82da015b-present.png
+?? .dsh-vision-router/artifacts/.runs/.vision-run-mutl2q2v-09d24fdd-a537-407e-8b8f-414eeb393355/sha256-f086c728d8563aaf46f05fe1e-7febb706-present.png
+?? .dsh-vision-router/artifacts/.runs/.vision-run-mutlp30v-89bd0333-f056-4f4b-b2c5-86f1cf696fe2/sha256-0b0810d8140d78f090e6c3442-4f446437-present.png
+?? .dsh-vision-router/artifacts/.runs/.vision-run-mutxba42-9c8867bc-4ccc-4c85-b4c3-58011721065d/sha256-6c43b186645f6351a4b00f31b-2eec9c3b-present.png
+?? .dsh-vision-router/artifacts/.runs/.vision-run-mutxq57z-cfff6ed8-db34-48cf-b954-2a9d84208bf1/sha256-b271e0af774492499a20421a0-bc14c7d5-present.png
+?? .dsh-vision-router/artifacts/E--Projects_Unity-MiHoYo-.dsh-sc-74b2ffd2-shot-1200x1000-fullpage.png
+?? .dsh-vision-router/artifacts/E--Projects_Unity-MiHoYo-.dsh-sc-74b2ffd2-shot-1200x820-fullpage.png
+?? .dsh-vision-router/artifacts/E--Projects_Unity-MiHoYo-.dsh-sc-74b2ffd2-shot-1200x860-fullpage.png
+?? .dsh-vision-router/artifacts/E--Projects_Unity-MiHoYo-.dsh-sc-74b2ffd2-shot-1200x880-fullpage.png
+?? Assets/A_UI.meta
+?? Assets/A_UI/ArtSample.meta
+?? Assets/A_UI/ArtSample/Button_Ani.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Button.controller
+?? Assets/A_UI/ArtSample/Button_Ani/Button.controller.meta
+?? "Assets/A_UI/ArtSample/Button_Ani/ChatGPT Image 2026年10月2日 23_52_01.png"
+?? "Assets/A_UI/ArtSample/Button_Ani/ChatGPT Image 2026年10月2日 23_52_01.png.meta"
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_00.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_00.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_01.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_01.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_02.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_02.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_03.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_03.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_04.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_04.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_05.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_05.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_06.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_06.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_07.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_07.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_08.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_08.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_09.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_09.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_10.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_10.png.meta
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_11.png
+?? Assets/A_UI/ArtSample/Button_Ani/Pressed/button_click_11.png.meta
+?? Assets/A_UI/ArtSample/Setting.png
+?? Assets/A_UI/ArtSample/Setting.png.meta
+?? "Assets/A_UI/ArtSample/图层 2.png"
+?? "Assets/A_UI/ArtSample/图层 2.png.meta"
+?? "Assets/A_UI/ArtSample/图层 3.png"
+?? "Assets/A_UI/ArtSample/图层 3.png.meta"
+?? "Assets/A_UI/ArtSample/椭圆 1.png"
+?? "Assets/A_UI/ArtSample/椭圆 1.png.meta"
+?? "Assets/A_UI/ArtSample/矩形 1.png"
+?? "Assets/A_UI/ArtSample/矩形 1.png.meta"
+?? Assets/A_UI/HUD_Test.unity
+?? Assets/A_UI/HUD_Test.unity.meta
+?? Assets/A_UI/SdfFusionUI.mat
+?? Assets/A_UI/SdfFusionUI.mat.meta
+?? Assets/A_UI/SdfFusionUI.shader
+?? Assets/A_UI/SdfFusionUI.shader.meta
+?? Assets/A_UI/UI.meta
+?? Assets/A_UI/UI/Package.meta
+?? Assets/A_UI/UI/Package/Navigation.meta
+?? Assets/A_UI/UI/Package/Navigation/Editor.meta
+?? Assets/A_UI/UI/Package/Navigation/Editor/UINavButtonEditor.cs
+?? Assets/A_UI/UI/Package/Navigation/Editor/UINavButtonEditor.cs.meta
+?? Assets/A_UI/UI/Package/Navigation/Editor/UINavigationEditorWindow.cs
+?? Assets/A_UI/UI/Package/Navigation/Editor/UINavigationEditorWindow.cs.meta
+?? Assets/A_UI/UI/Package/Navigation/Editor/UINavigationValidator.cs
+?? Assets/A_UI/UI/Package/Navigation/Editor/UINavigationValidator.cs.meta
+?? Assets/A_UI/UI/Package/Navigation/UINavButton.cs
+?? Assets/A_UI/UI/Package/Navigation/UINavButton.cs.meta
+?? Assets/A_UI/UI/Package/Navigation/UINavNode.cs
+?? Assets/A_UI/UI/Package/Navigation/UINavNode.cs.meta
+?? Assets/A_UI/UI/Package/Navigation/UINavigationLocator.cs
+?? Assets/A_UI/UI/Package/Navigation/UINavigationLocator.cs.meta
+?? Assets/A_UI/UI/Package/Navigation/UINavigator.cs
+?? Assets/A_UI/UI/Package/Navigation/UINavigator.cs.meta
+?? Assets/A_UI/UI/Package/Prefabs.meta
+?? Assets/A_UI/UI/Package/Prefabs/Button.prefab
+?? Assets/A_UI/UI/Package/Prefabs/Button.prefab.meta
+?? Assets/A_UI/UI/Package/Prefabs/SubPanel.prefab
+?? Assets/A_UI/UI/Package/Prefabs/SubPanel.prefab.meta
+?? Assets/A_UI/UI/Package/Subpanel.cs
+?? Assets/A_UI/UI/Package/Subpanel.cs.meta
+?? Assets/A_UI/UI/Package/UIManager.cs
+?? Assets/A_UI/UI/Package/UIManager.cs.meta
+?? Assets/A_UI/UI/Package/UIbase.cs
+?? Assets/A_UI/UI/Package/UIbase.cs.meta
+?? Assets/A_UI/UIShowcase.unity
+?? Assets/A_UI/UIShowcase.unity.meta
+?? Assets/A_UI/UI_SdfBlendField.mat
+?? Assets/A_UI/UI_SdfBlendField.mat.meta
+?? Assets/Belle/M_Body1.mat
+?? Assets/Belle/M_Body1.mat.meta
+?? Assets/Belle/M_Body2.mat
+?? Assets/Belle/M_Body2.mat.meta
+?? Assets/Belle/M_Face.mat
+?? Assets/Belle/M_Face.mat.meta
+?? Assets/Editor/GooeyUIGroupPhase2Tests.cs
+?? Assets/Editor/GooeyUIGroupPhase2Tests.cs.meta
+?? Assets/Plugins.meta
+?? Assets/Plugins/Demigiant.meta
+?? Assets/Plugins/Demigiant/DOTween.meta
+?? Assets/Plugins/Demigiant/DOTween/DOTween.XML
+?? Assets/Plugins/Demigiant/DOTween/DOTween.XML.meta
+?? Assets/Plugins/Demigiant/DOTween/DOTween.dll
+?? Assets/Plugins/Demigiant/DOTween/DOTween.dll.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor/DOTweenEditor.XML
+?? Assets/Plugins/Demigiant/DOTween/Editor/DOTweenEditor.XML.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor/DOTweenEditor.dll
+?? Assets/Plugins/Demigiant/DOTween/Editor/DOTweenEditor.dll.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/DOTweenIcon.png
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/DOTweenIcon.png.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/DOTweenMiniIcon.png
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/DOTweenMiniIcon.png.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/Footer.png
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/Footer.png.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/Footer_dark.png
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/Footer_dark.png.meta
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/Header.jpg
+?? Assets/Plugins/Demigiant/DOTween/Editor/Imgs/Header.jpg.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleAudio.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleAudio.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleEPOOutline.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleEPOOutline.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModulePhysics.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModulePhysics.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModulePhysics2D.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModulePhysics2D.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleSprite.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleSprite.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUI.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUI.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUIToolkit.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUIToolkit.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUnityVersion.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUnityVersion.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUtils.cs
+?? Assets/Plugins/Demigiant/DOTween/Modules/DOTweenModuleUtils.cs.meta
+?? Assets/Plugins/Demigiant/DOTween/readme.txt
+?? Assets/Plugins/Demigiant/DOTween/readme.txt.meta
+?? Assets/Scripts/AnimationController.cs
+?? Assets/Scripts/AnimationController.cs.meta
+?? Assets/Scripts/CameraFollow.cs
+?? Assets/Scripts/CameraFollow.cs.meta
+?? Assets/Scripts/GooeySdf.cs
+?? Assets/Scripts/GooeySdf.cs.meta
+?? Assets/Scripts/GooeyUIGroup.cs
+?? Assets/Scripts/GooeyUIGroup.cs.meta
+?? Assets/Scripts/Input'Manager.meta
+?? Assets/Scripts/Input'Manager/InputManager.cs
+?? Assets/Scripts/Input'Manager/InputManager.cs.meta
+?? Assets/Scripts/Input'Manager/PlayerInputState.cs
+?? Assets/Scripts/Input'Manager/PlayerInputState.cs.meta
+?? Assets/Scripts/PlayerController.cs
+?? Assets/Scripts/PlayerController.cs.meta
+?? "Assets/TextMesh Pro.meta"
+?? "Assets/TextMesh Pro/Fonts.meta"
+?? "Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt"
+?? "Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt.meta"
+?? "Assets/TextMesh Pro/Fonts/LiberationSans.ttf"
+?? "Assets/TextMesh Pro/Fonts/LiberationSans.ttf.meta"
+?? "Assets/TextMesh Pro/Resources.meta"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials.meta"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Drop Shadow.mat"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Drop Shadow.mat.meta"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Fallback.asset.meta"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Outline.mat"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF - Outline.mat.meta"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset"
+?? "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset.meta"
+?? "Assets/TextMesh Pro/Resources/LineBreaking Following Characters.txt"
+?? "Assets/TextMesh Pro/Resources/LineBreaking Following Characters.txt.meta"
+?? "Assets/TextMesh Pro/Resources/LineBreaking Leading Characters.txt"
+?? "Assets/TextMesh Pro/Resources/LineBreaking Leading Characters.txt.meta"
+?? "Assets/TextMesh Pro/Resources/Style Sheets.meta"
+?? "Assets/TextMesh Pro/Resources/Style Sheets/Default Style Sheet.asset"
+?? "Assets/TextMesh Pro/Resources/Style Sheets/Default Style Sheet.asset.meta"
+?? "Assets/TextMesh Pro/Resources/TMP Settings.asset"
+?? "Assets/TextMesh Pro/Resources/TMP Settings.asset.meta"
+?? "Assets/TextMesh Pro/Shaders.meta"
+?? "Assets/TextMesh Pro/Shaders/SDFFunctions.hlsl"
+?? "Assets/TextMesh Pro/Shaders/SDFFunctions.hlsl.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_Bitmap-Custom-Atlas.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_Bitmap-Custom-Atlas.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_Bitmap-Mobile.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_Bitmap-Mobile.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_Bitmap.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_Bitmap.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF Overlay.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF Overlay.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF SSD.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF SSD.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP LIT.shadergraph"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP LIT.shadergraph.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP UNLIT.shadergraph"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP UNLIT.shadergraph.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile Masking.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile Masking.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile Overlay.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile Overlay.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile SSD.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile SSD.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile-2-Pass.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile-2-Pass.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Surface-Mobile.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Surface-Mobile.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Surface.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-Surface.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-URP Lit.shadergraph"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-URP Lit.shadergraph.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-URP Unlit.shadergraph"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF-URP Unlit.shadergraph.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_SDF.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMP_Sprite.shader"
+?? "Assets/TextMesh Pro/Shaders/TMP_Sprite.shader.meta"
+?? "Assets/TextMesh Pro/Shaders/TMPro.cginc"
+?? "Assets/TextMesh Pro/Shaders/TMPro.cginc.meta"
+?? "Assets/TextMesh Pro/Shaders/TMPro_Mobile.cginc"
+?? "Assets/TextMesh Pro/Shaders/TMPro_Mobile.cginc.meta"
+?? "Assets/TextMesh Pro/Shaders/TMPro_Properties.cginc"
+?? "Assets/TextMesh Pro/Shaders/TMPro_Properties.cginc.meta"
+?? "Assets/TextMesh Pro/Shaders/TMPro_Surface.cginc"
+?? "Assets/TextMesh Pro/Shaders/TMPro_Surface.cginc.meta"
+?? Assets/UIShowcase.unity
+?? Assets/UIShowcase.unity.meta
+?? Assets/URP.meta
+?? "Assets/URP/New Custom Universal Renderer Data.asset"
+?? "Assets/URP/New Custom Universal Renderer Data.asset.meta"
+?? Assets/URP/NewShaderVariants.shadervariants
+?? Assets/URP/NewShaderVariants.shadervariants.meta
+?? "Assets/URP/Universal Render Pipeline Asset.asset"
+?? "Assets/URP/Universal Render Pipeline Asset.asset.meta"
+?? "Assets/URP/Universal Render Pipeline Asset_Renderer.asset"
+?? "Assets/URP/Universal Render Pipeline Asset_Renderer.asset.meta"
+?? README.md
+?? Slime_Dungeon_PPTX_抽取报告.md
+?? UI_Mockup_Slime_Fantasy.svg
+?? UI_Mockup_Slime_MainMenu.svg
+?? UI_Mockup_Slime_Moonlit.svg
+?? docs/ui-motion-module-design.md

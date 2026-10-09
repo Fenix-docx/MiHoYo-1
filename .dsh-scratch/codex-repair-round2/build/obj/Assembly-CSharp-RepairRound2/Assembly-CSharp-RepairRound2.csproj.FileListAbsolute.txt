@@ -1,0 +1,10 @@
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-RepairRound2\Assembly-CSharp-RepairRound2.csproj.AssemblyReference.cache
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-RepairRound2\Assembly-CSharp-RepairRound2.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-RepairRound2\Assembly-CSharp-RepairRound2.csproj.CoreCompileInputs.cache
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-RepairRound2\Assembly-CSharp-RepairRound2.sourcelink.json
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp.deps.json
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp.pdb
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-RepairRound2\Assembly.97ED142D.Up2Date
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-RepairRound2\Assembly-CSharp.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-RepairRound2\Assembly-CSharp.pdb

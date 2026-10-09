@@ -70,8 +70,6 @@ crashlytics-build.properties
 /.worktrees/
 
 # Project-specific: keep the Slime workspace small for GitHub.
-/Assets/Belle/
-/Assets/Belle.meta
 /Assets/Editor.meta
 /Assets/Mai.blend
 /Assets/Mai.blend.meta
@@ -81,6 +79,9 @@ crashlytics-build.properties
 /Assets/Resources.meta
 /Assets/Scripts/
 /Assets/Scripts.meta
+!/Assets/Scripts/
+!/Assets/Scripts/SdfUiController.cs
+!/Assets/Scripts/SdfUiController.cs.meta
 /Assets/_Recovery/
 /Assets/_Recovery.meta
 /Assets/reference/
@@ -96,3 +97,4 @@ Assets/Slime/Input'Manager/InputManager.cs
 Assets/Slime/Input'Manager/InputManager.cs.meta
 Assets/Slime/Input'Manager/PlayerInputState.cs
 Assets/Slime/Input'Manager/PlayerInputState.cs.meta
+Assets/Belle

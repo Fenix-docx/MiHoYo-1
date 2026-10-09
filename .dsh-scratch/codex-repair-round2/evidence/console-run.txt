@@ -1,0 +1,12 @@
+$ dotnet run --project .dsh-scratch/codex-repair-round2/console/MotionProof.csproj --no-launch-profile
+ARC intervals=100 LUT=257 length=3.8907583 mean=0.038904730156064035 std/mean=0.00032667219802022963 threshold=0.02 PASS
+BACK t=-0.1 u=-0.5368912 cross=-7.450581E-09 projection=-2.0889137 expected=-2.088914 PASS
+BACK t=0.7 u=1.0801995 cross=0 projection=0.3120368 expected=0.31203678 PASS
+ELASTIC overshoot=1.4 t=0.1 u=1.6742641 PASS
+DETERMINISM dtA=[0.0625 x8] dtB=[0.125,0.375] t=0.5 xBits=3FB1194C yBits=3ED3B7D0 repeated=equal sequences=equal PASS
+CLOCK shared-seek pause resume reverse PASS
+ANCHOR right+0.1short before=(56,0) after=(108,0) deltaX=52 PASS (pure rectangle math only)
+QUEUE duplicate-fold=1 Back5=AAAII ToRoot-clear=PASS CloseAll-clear=PASS overflow=reject-newest order=A,B warnings=1 PASS
+RESULT 25 checks PASS; Unity lifecycle/navigation/watchdog/RectTransform resolution NOT EXECUTED; PathChain is P1, not implemented.
+
+EXIT_CODE=0

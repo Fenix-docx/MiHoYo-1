@@ -1,0 +1,20 @@
+$ dotnet build Assembly-CSharp-Verify.csproj --nologo -v m -m:1 -p:BuildInParallel=false -p:RestoreDisableParallel=true
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Assembly-CSharp-firstpass-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp-firstpass.dll
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\SlimeGpuSurfacePipeline.cs(76,27): warning CS0649: 从未对字段“SlimeGpuSurfacePipeline.SurfaceVertexGpu.Normal”赋值，字段将一直保持其默认值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\SlimeGpuSurfacePipeline.cs(75,27): warning CS0649: 从未对字段“SlimeGpuSurfacePipeline.SurfaceVertexGpu.Position”赋值，字段将一直保持其默认值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\Slime_ControllerMotor.cs(63,15): warning CS0414: 字段“SlimeControllerMotor._lastCollisionSoundTime”已被赋值，但从未使用过它的值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+  Assembly-CSharp-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp.dll
+
+已成功生成。
+
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\SlimeGpuSurfacePipeline.cs(76,27): warning CS0649: 从未对字段“SlimeGpuSurfacePipeline.SurfaceVertexGpu.Normal”赋值，字段将一直保持其默认值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\SlimeGpuSurfacePipeline.cs(75,27): warning CS0649: 从未对字段“SlimeGpuSurfacePipeline.SurfaceVertexGpu.Position”赋值，字段将一直保持其默认值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\Slime_ControllerMotor.cs(63,15): warning CS0414: 字段“SlimeControllerMotor._lastCollisionSoundTime”已被赋值，但从未使用过它的值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+    3 个警告
+    0 个错误
+
+已用时间 00:00:02.62
+
+EXIT_CODE=0

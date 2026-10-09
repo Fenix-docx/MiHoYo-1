@@ -1,0 +1,146 @@
+--- Assets/Editor/UINavigationQueueTests.cs (before)
++++ Assets/Editor/UINavigationQueueTests.cs
+@@ -81,6 +81,35 @@
+         Finish(); Assert.AreSame(pages[2], nav.Current); Assert.AreEqual(2, events);
+         Assert.IsFalse(nav.IsNavigating);
+     }
++    [TestCase(true, true)]
++    [TestCase(true, false)]
++    [TestCase(false, false)]
++    public void PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled(bool emptyStack, bool restricted)
++    {
++        if (emptyStack) nav.CloseAll();
++        typeof(UINavigator).GetField("restrictToDirectChildren",
++            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(nav, restricted);
++        var go = new GameObject("unregistered", typeof(RectTransform));
++        go.transform.SetParent(root.transform, false); go.SetActive(false);
++        var panel = go.AddComponent<NavigationTestPanel>();
++        Assert.IsNull(nav.FindNode(panel));
++        int events = 0; nav.Navigated += (a, b) => { events++; Assert.AreSame(panel, b); };
++        Assert.IsTrue(nav.Push(panel));
++        Assert.AreSame(panel, nav.Current); Assert.IsTrue(panel.IsOpen);
++        Assert.AreEqual(1, panel.Opened); Assert.AreEqual(1, events);
++        Assert.IsFalse(nav.IsNavigating); Assert.IsNull(nav.FindNode(panel));
++    }
++    [Test]
++    public void QueuedPushRevalidatesAgainstLatestCurrentAndContinues()
++    {
++        nav.AddChild(pages[0], pages[3]);
++        pages[1].Animate = true;
++        nav.Push(pages[1]); nav.Push(pages[3]); nav.Push(pages[2]);
++        LogAssert.Expect(LogType.Warning, "[UINavigator] page3 不是 page1 的直接子节点。");
++        Finish(); Finish();
++        Assert.AreSame(pages[2], nav.Current); Assert.AreEqual(0, pages[3].Opened);
++        Assert.IsFalse(nav.IsNavigating);
++    }
+     [Test]
+     public void Test13_TwoBacksReturnTwoLevels()
+     {
+@@ -139,7 +168,7 @@
+         pages[1].Animate = true; nav.Push(pages[1]);
+         var slots = (System.Collections.IList)typeof(MotionSystem).GetField("slots",
+             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(MotionSystem.Instance);
+-        // ??????????????????????????? IsDone?
++        // 模拟完成回调丢失，验证导航仍优先检查句柄的 IsDone。
+         foreach (var slot in slots) slot.GetType().GetField("complete").SetValue(slot, null);
+         MotionSystem.Instance.Advance(1, 1);
+         Assert.IsTrue(pages[1].IsTransitioning);
+@@ -152,7 +181,7 @@
+     {
+         pages[1].Animate = true; nav.Push(pages[1]); pages[1].gameObject.SetActive(false);
+         MotionSystem.Instance.Advance(.1, .1);
+-        LogAssert.Expect(LogType.Warning, "[UINavigator] ????????????");
++        LogAssert.Expect(LogType.Warning, "[UINavigator] 转移句柄失效，强制完成。");
+         nav.ProcessNavigation(now + .1);
+         Assert.AreSame(pages[1], nav.Current); Assert.IsTrue(pages[1].IsOpen);
+         Assert.IsFalse(nav.IsNavigating);
+@@ -162,7 +191,7 @@
+     {
+         var group = pages[0].gameObject.AddComponent<CanvasGroup>(); group.blocksRaycasts = false;
+         pages[0].Animate = true; nav.Push(pages[1]); pages[0].Clock.Pause();
+-        LogAssert.Expect(LogType.Error, "[UINavigator] ??????????????????");
++        LogAssert.Expect(LogType.Error, "[UINavigator] 转移看门狗超时，强制完成并继续队列。");
+         nav.ProcessNavigation(now + 4);
+         Assert.IsFalse(group.blocksRaycasts); Assert.IsFalse(nav.IsNavigating);
+     }
+@@ -185,7 +214,7 @@
+         Assert.AreSame(pages[1], a.target); Assert.AreSame(pages[2], b.target);
+     }
+     [Test]
+-    public void ReopeningDuringExitKillsOldCompletionAndKeepsPosition()
++    public void ReopeningDuringExitIgnoresOldCompletionAndStaysOpen()
+     {
+         var panel = pages[0]; panel.Animate = true; panel.Close();
+         var old = panel.TransitionHandle.Value; MotionSystem.Instance.Advance(.25, .25);
+--- Assets/A_UI/UI/Package/Navigation/UINavigator.cs (before)
++++ Assets/A_UI/UI/Package/Navigation/UINavigator.cs
+@@ -209,7 +209,7 @@
+         }
+         private bool ValidateTarget(UIBase target, UIBase current)
+         {
+-            if (target == null || FindNode(target) == null)
++            if (target == null)
+             {
+                 Debug.LogWarning("[UINavigator] 目标为空或已从导航树移除，丢弃意图。", this);
+                 return false;
+@@ -217,7 +217,7 @@
+             if (current != null && current != target && restrictToDirectChildren)
+             {
+                 var node = FindNode(current);
+-                if (node == null || !node.HasChildren(target))
++                if (FindNode(target) == null || node == null || !node.HasChildren(target))
+                 {
+                     Debug.LogWarning($"[UINavigator] {target.name} 不是 {current.name} 的直接子节点。", this);
+                     return false;
+@@ -259,6 +259,8 @@
+                 target = rootPage;
+                 if (target == null) { Debug.LogWarning("[UINavigator] 根面板未配置，无法重置到根。", this); return; }
+             }
++            // 游离面板允许入栈；已登记目标仍保留转移期间被移除后的提交保护。
++            bool targetWasRegistered = FindNode(target) != null;
+             transitioning = true;
+             switch (intent.kind)
+             {
+@@ -266,7 +268,7 @@
+                     var node = FindNode(from);
+                     if (node != null && node.CloseParentOnPush) Touch(from, false, intent.instant, now);
+                     Touch(target, true, intent.instant, now);
+-                    commit = () => { if (target != null && FindNode(target) != null) navStack.Push(target); Navigated?.Invoke(from, Current); };
++                    commit = () => { if (target != null && (!targetWasRegistered || FindNode(target) != null)) navStack.Push(target); Navigated?.Invoke(from, Current); };
+                     break;
+                 case NavIntentKind.Back:
+                 case NavIntentKind.Replace:
+@@ -275,7 +277,7 @@
+                     commit = () =>
+                     {
+                         if (navStack.Count > 0 && navStack.Peek() == from) navStack.Pop();
+-                        if (intent.kind == NavIntentKind.Replace && target != null && FindNode(target) != null) navStack.Push(target);
++                        if (intent.kind == NavIntentKind.Replace && target != null && (!targetWasRegistered || FindNode(target) != null)) navStack.Push(target);
+                         Navigated?.Invoke(from, Current);
+                     };
+                     break;
+@@ -314,7 +316,7 @@
+             }
+             catch (Exception ex)
+             {
+-                // ???????????????????
++                // 面板回调异常也要结束转移，避免阻塞后续队列和输入恢复。
+                 Debug.LogException(ex, page);
+                 page.ForceCompleteTransition();
+             }
+@@ -501,4 +503,4 @@
+             else page.Close();
+         }
+     }
+-}+}
+--- Assets/A_UI/UI/Motion/Integration/UIPanelMotion.cs (before)
++++ Assets/A_UI/UI/Motion/Integration/UIPanelMotion.cs
+@@ -13,7 +13,7 @@
+         [SerializeField] private bool useUnscaledTime = true;
+         private Vector2 home;
+         private bool captured;
+-        /// <summary>???????????????????</summary>
++        /// <summary>跳过动画时直接写入终态，让面板显隐与位置保持一致。</summary>
+         public void Snap(bool opening)
+         {
+             var rect = (RectTransform)transform;

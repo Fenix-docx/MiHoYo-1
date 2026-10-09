@@ -1,0 +1,9 @@
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp-firstpass.deps.json
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp-firstpass.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp-firstpass.pdb
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-firstpass-RepairRound2\Assembly-CSharp-firstpass-RepairRound2.csproj.AssemblyReference.cache
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-firstpass-RepairRound2\Assembly-CSharp-firstpass-RepairRound2.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-firstpass-RepairRound2\Assembly-CSharp-firstpass-RepairRound2.csproj.CoreCompileInputs.cache
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-firstpass-RepairRound2\Assembly-CSharp-firstpass-RepairRound2.sourcelink.json
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-firstpass-RepairRound2\Assembly-CSharp-firstpass.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\obj\Assembly-CSharp-firstpass-RepairRound2\Assembly-CSharp-firstpass.pdb

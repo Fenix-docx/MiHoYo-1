@@ -1,0 +1,6 @@
+COMPILED_SOURCE_HASHES: 18/18 match final sources
+PROTECTED_FILES: 151/151 hashes match (report checked as preserved prefix after append)
+EXACT_LOG_MATCH Warning: [UINavigator] 转移句柄失效，强制完成。
+EXACT_LOG_MATCH Error: [UINavigator] 转移看门狗超时，强制完成并继续队列。
+TEMPORARY_PROJECTS: removed; original csproj files unchanged
+PUBLIC_METHOD_SIGNATURES: unchanged; added-line whitespace PASS

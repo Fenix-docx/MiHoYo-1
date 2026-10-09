@@ -1,0 +1,25 @@
+﻿================ 编译范围补齐情况 ================
+
+
+Assembly     : Assembly-CSharp
+Exit         : 37
+MissingAdded : 0
+Missing      : 
+
+Assembly     : Assembly-CSharp-Editor
+Exit         : 37
+MissingAdded : 0
+Missing      : 
+
+
+
+================ 运行时程序集构建输出（尾部） ================
+INJECTED_NATIVE_BUILD_FAILURE: exit=37 (no compiler invoked)
+================ Editor 程序集构建输出（尾部） ================
+INJECTED_NATIVE_BUILD_FAILURE: exit=37 (no compiler invoked)
+================ 结论 ================
+FAIL: runtime=37 editor=37 —— 详见上面的错误行
+CLEANUP: 三个临时 Verify csproj 已删除（成功/失败均执行）
+INJECTED_SCRIPT_EXIT=1
+AFTER_FAILURE_ROOT_VERIFY_COUNT=0
+

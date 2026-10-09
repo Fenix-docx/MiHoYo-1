@@ -1,0 +1,7 @@
+COMPILED_SOURCE_HASHES: 18/18 match final source
+UNCHANGED_SHA256: docs/ui-motion-module-design.md b003cb4ef339302aef603a91234b66ddbf5775ee7a7b1d532c79e7cf9edb2b60
+UNCHANGED_SHA256: Assets/Scripts/GooeyUIGroup.cs 6905222576abd4cb4db91786391fcbaccc7c305b9adf7ee3307f468ddea95aed
+EXISTING_PUBLIC_METHOD_SIGNATURES: Assets/A_UI/UI/Package/UIbase.cs 2 retained
+EXISTING_PUBLIC_METHOD_SIGNATURES: Assets/A_UI/UI/Package/Navigation/UINavigator.cs 17 retained
+ADDED_LINE_WHITESPACE: PASS (Python source comparison; no git invoked)
+TEMP_ROOT_VERIFY_PROJECTS: removed

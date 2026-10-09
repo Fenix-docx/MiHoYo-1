@@ -1,0 +1,160 @@
+--- before/Assets/A_UI/UI/Motion/Path/PathSegment.cs
++++ after/Assets/A_UI/UI/Motion/Path/PathSegment.cs
+@@ -3,8 +3,8 @@
+ 
+ namespace UIPackage.Motion
+ {
+-    // P1 才实现其余几何类型；参数区可扩展，采样入口保持 tag + switch。
+-    public enum PathSegmentKind { Line, CubicBezier }
++    // 参数区只含值类型，采样入口保持 tag + switch；保留 P0 的枚举数值。
++    public enum PathSegmentKind { Line, CubicBezier, QuadBezier, Arc, CatmullRom }
+     [Serializable]
+     public struct PathSegment
+     {
+@@ -14,12 +14,53 @@
+             new PathSegment { kind = PathSegmentKind.Line, p0 = from, p3 = to };
+         public static PathSegment CubicBezier(Vector2 from, Vector2 c0, Vector2 c1, Vector2 to) =>
+             new PathSegment { kind = PathSegmentKind.CubicBezier, p0 = from, p1 = c0, p2 = c1, p3 = to };
++        // Arc 单独编码中心/轴缩放/弧度角/旋转；p0/p3 仍缓存真实端点供旧工具读取。
++        // CR 的 p0/p3 是虚点，p1/p2 是真实起止点；其他类型的 p0/p3 为起止点。
++        public Vector2 center, ellipseScale;
++        public float radius, a0, a1, rotation;
++        public static PathSegment QuadBezier(Vector2 from, Vector2 control, Vector2 to) =>
++            new PathSegment { kind = PathSegmentKind.QuadBezier, p0 = from, p1 = control, p3 = to };
++        public static PathSegment CatmullRom(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3) =>
++            new PathSegment { kind = PathSegmentKind.CatmullRom, p0 = p0, p1 = p1, p2 = p2, p3 = p3 };
++        public static PathSegment Arc(Vector2 center, float radius, float a0, float a1) =>
++            Arc(center, radius, a0, a1, Vector2.one);
++        public static PathSegment Arc(Vector2 center, float radius, float a0, float a1, Vector2 ellipseScale)
++        {
++            var result = new PathSegment { kind = PathSegmentKind.Arc, center = center, radius = radius,
++                a0 = a0, a1 = a1, ellipseScale = ellipseScale };
++            result.p0 = result.Evaluate(0); result.p3 = result.Evaluate(1);
++            return result;
++        }
++        /// <summary>圆：r·角差；椭圆：第二类椭圆积分，反向和多圈同样有效。</summary>
++        public float ArcLength(float t = 1)
++        {
++            if (kind != PathSegmentKind.Arc) throw new InvalidOperationException("仅 Arc 有解析弧长。");
++            return (float)ArcLengthMath.Length(radius * (double)ellipseScale.x, radius * (double)ellipseScale.y,
++                a0, a0 + ((double)a1 - a0) * t);
++        }
++        private Vector2 Rotate(Vector2 v)
++        {
++            float c = (float)Math.Cos(rotation), s = (float)Math.Sin(rotation);
++            return new Vector2(c * v.x - s * v.y, s * v.x + c * v.y);
++        }
+         public Vector2 Evaluate(float t)
+         {
+             switch (kind)
+             {
+                 case PathSegmentKind.Line: return p0 + (p3 - p0) * t;
+                 case PathSegmentKind.CubicBezier: return MotionMath.Cubic(p0, p1, p2, p3, t);
++                case PathSegmentKind.QuadBezier:
++                    float q = 1 - t;
++                    return q * q * p0 + 2 * q * t * p1 + t * t * p3;
++                case PathSegmentKind.Arc:
++                    double angle = a0 + ((double)a1 - a0) * t;
++                    return center + Rotate(new Vector2((float)Math.Cos(angle) * radius * ellipseScale.x,
++                        (float)Math.Sin(angle) * radius * ellipseScale.y));
++                case PathSegmentKind.CatmullRom:
++                    if (t == 0) return p1;
++                    if (t == 1) return p2;
++                    return .5f * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * (t * t)
++                        + (-p0 + 3 * p1 - 3 * p2 + p3) * (t * t * t));
+                 default: throw new NotSupportedException("未实现的路径段。");
+             }
+         }
+@@ -36,6 +77,21 @@
+                         v = t <= 0 ? (p2 - p0) : (p3 - p1);
+                     if (v.sqrMagnitude < 1e-12f) v = p3 - p0;
+                     break;
++                case PathSegmentKind.QuadBezier:
++                    v = 2 * ((1 - t) * (p1 - p0) + t * (p3 - p1));
++                    if (v.sqrMagnitude < 1e-12f) v = p3 - p0;
++                    break;
++                case PathSegmentKind.Arc:
++                    double angle = a0 + ((double)a1 - a0) * t;
++                    v = Rotate(new Vector2(-(float)Math.Sin(angle) * radius * ellipseScale.x,
++                        (float)Math.Cos(angle) * radius * ellipseScale.y)) * (a1 - a0);
++                    if (v.sqrMagnitude < 1e-12f) v = Evaluate(1) - Evaluate(0);
++                    break;
++                case PathSegmentKind.CatmullRom:
++                    v = .5f * ((-p0 + p2) + 2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) * t
++                        + 3 * (-p0 + 3 * p1 - 3 * p2 + p3) * (t * t));
++                    if (v.sqrMagnitude < 1e-12f) v = p2 - p1;
++                    break;
+                 default: throw new NotSupportedException("未实现的路径段。");
+             }
+             return v.normalized;
+--- before/Assets/A_UI/UI/Motion/Tracks/MotionTrack.cs
++++ after/Assets/A_UI/UI/Motion/Tracks/MotionTrack.cs
+@@ -16,6 +16,7 @@
+         private readonly AnchorRef from, to;
+         private PathSegment path;
+         private readonly float[] lut;
++        private readonly PathChain chain;
+         public MotionTrack(PathSegment path, float duration, Ease ease, MotionClock clock, RectTransform target,
+             PathSpace space, bool anchors = false, AnchorRef from = default, AnchorRef to = default, bool clamp = false)
+         {
+@@ -24,6 +25,15 @@
+             Target = target; this.space = space; this.anchors = anchors; this.from = from; this.to = to; this.clamp = clamp;
+             lut = new float[path.kind == PathSegmentKind.Line ? 2 : 257];
+             MotionMath.BuildArcLut(path, lut);
++            // 新段使用链条的真实端点与解析弧长，P0 单段路径仍走原实现。
++            if (!anchors && path.kind != PathSegmentKind.Line && path.kind != PathSegmentKind.CubicBezier)
++                chain = new PathChain(new[] { path });
++        }
++        public MotionTrack(PathChain chain, float duration, Ease ease, MotionClock clock, RectTransform target,
++            PathSpace space, bool clamp = false)
++            : this(PathSegment.Line(default, default), duration, ease, clock, target, space, clamp: clamp)
++        {
++            this.chain = chain ?? throw new ArgumentNullException(nameof(chain));
+         }
+         public MotionSample Sample(double seconds)
+         {
+@@ -43,7 +53,9 @@
+         }
+         private Vector2 Position(float t)
+         {
+-            var p = AnchorResolver.FromP(MotionMath.EvaluateByArc(path, ease.Evaluate(t), lut, clamp), space.rect);
++            var point = chain != null ? chain.EvaluateByArc(ease.Evaluate(t), clamp)
++                : MotionMath.EvaluateByArc(path, ease.Evaluate(t), lut, clamp);
++            var p = AnchorResolver.FromP(point, space.rect);
+             return RectBinder.LocalToAnchored(Target, p);
+         }
+     }
+--- before/Assets/A_UI/UI/Motion/MotionPlan.cs
++++ after/Assets/A_UI/UI/Motion/MotionPlan.cs
+@@ -9,13 +9,19 @@
+         private AnchorRef from, to; 
+         private bool hasFrom, hasTo, hasCurve, clamp;
+         private PathSegment path;
++        private PathChain chain;
+         private float duration = 3f;
+         private Ease ease = Motion.Ease.Linear; // 缓动
+         private MotionClock clock; // 运动时钟
+         private RectTransform target; // 联动跟随的目标
+         public MotionPlan From(AnchorRef value) { from = value; hasFrom = true; hasCurve = false; return this; } 
+         public MotionPlan To(AnchorRef value) { to = value; hasTo = true; hasCurve = false; return this; }
+-        public MotionPlan Curve(PathSegment value) { path = value; hasCurve = true; hasFrom = hasTo = false; return this; }
++        public MotionPlan Curve(PathSegment value) { chain = null; path = value; hasCurve = true; hasFrom = hasTo = false; return this; }
++        public MotionPlan Curve(PathChain value)
++        {
++            chain = value ?? throw new ArgumentNullException(nameof(value));
++            hasCurve = true; hasFrom = hasTo = false; return this;
++        }
+         public MotionPlan Duration(float value) { duration = value; return this; }
+         public MotionPlan Ease(Ease value) { ease = value; return this; } 
+         public MotionPlan Clock(MotionClock value) { clock = value; return this; } // 允许外部共享时钟
+@@ -26,7 +32,9 @@
+             if (target == null || !(target.parent is RectTransform parent))
+                 throw new InvalidOperationException("绑定目标必须具有 RectTransform 父级。");
+             if (!hasCurve && !(hasFrom && hasTo)) throw new InvalidOperationException("请设置 Curve 或 From/To。");
+-            var track = new MotionTrack(hasCurve ? path : PathSegment.Line(default, default), duration, ease, clock,
++            var track = hasCurve && chain != null
++                ? new MotionTrack(chain, duration, ease, clock, target, new PathSpace { rect = parent }, clamp)
++                : new MotionTrack(hasCurve ? path : PathSegment.Line(default, default), duration, ease, clock,
+                 target, new PathSpace { rect = parent }, !hasCurve, from, to, clamp);
+             return MotionSystem.Instance.Register(track);
+         }

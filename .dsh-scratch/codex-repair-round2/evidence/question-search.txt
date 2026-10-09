@@ -1,0 +1,3 @@
+$ rg -n -F ??? Assets/A_UI/UI/Motion Assets/A_UI/UI/Package Assets/Editor/MotionTests.cs Assets/Editor/UINavigationQueueTests.cs
+
+EXIT_CODE=1

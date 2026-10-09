@@ -1,0 +1,45 @@
+$ dotnet build Assembly-CSharp-RepairRound2.csproj --nologo -v m -m:1 -p:BuildInParallel=false -p:RestoreDisableParallel=true
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Assembly-CSharp-firstpass-RepairRound2 -> E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp-firstpass.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UINavigator.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UINavigator” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UIbase.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UIbase” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionPlan.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionPlan” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionHandle.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionHandle” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\Ease.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_Ease” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionTypes.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionTypes” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionClock.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionClock” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionSystem.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionSystem” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\AnchorResolver.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_AnchorResolver” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UINavigationQueue.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UINavigationQueue” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\PathSegment.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_PathSegment” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionTrack.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionTrack” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionOwnership.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionOwnership” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\RectBinder.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_RectBinder” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionMath.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionMath” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UIPanelMotion.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UIPanelMotion” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+
+生成失败。
+
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UINavigator.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UINavigator” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UIbase.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UIbase” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionPlan.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionPlan” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionHandle.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionHandle” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\Ease.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_Ease” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionTypes.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionTypes” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionClock.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionClock” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionSystem.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionSystem” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\AnchorResolver.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_AnchorResolver” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UINavigationQueue.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UINavigationQueue” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\PathSegment.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_PathSegment” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionTrack.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionTrack” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionOwnership.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionOwnership” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\RectBinder.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_RectBinder” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionMath.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionMath” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UIPanelMotion.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UIPanelMotion” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-RepairRound2.csproj]
+    0 个警告
+    16 个错误
+
+已用时间 00:00:02.84
+
+EXIT_CODE=1

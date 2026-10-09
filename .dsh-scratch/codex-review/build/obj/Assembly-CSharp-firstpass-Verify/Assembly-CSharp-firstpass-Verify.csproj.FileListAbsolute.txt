@@ -1,0 +1,9 @@
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp-firstpass.deps.json
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp-firstpass.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp-firstpass.pdb
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-firstpass-Verify\Assembly-CSharp-firstpass-Verify.csproj.AssemblyReference.cache
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-firstpass-Verify\Assembly-CSharp-firstpass-Verify.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-firstpass-Verify\Assembly-CSharp-firstpass-Verify.csproj.CoreCompileInputs.cache
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-firstpass-Verify\Assembly-CSharp-firstpass-Verify.sourcelink.json
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-firstpass-Verify\Assembly-CSharp-firstpass.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-firstpass-Verify\Assembly-CSharp-firstpass.pdb

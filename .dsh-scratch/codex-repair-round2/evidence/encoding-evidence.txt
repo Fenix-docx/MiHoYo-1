@@ -1,0 +1,19 @@
+$ rg -n encoding|write_text|open\( .dsh-scratch/codex-review -g write-*.py
+.dsh-scratch/codex-review\write-tests.py:3:p.write_text('''using System;
+.dsh-scratch/codex-review\write-tests.py:93:''',encoding='utf-8')
+.dsh-scratch/codex-review\write-tests.py:95:p.write_text('''using System;
+.dsh-scratch/codex-review\write-tests.py:257:''',encoding='utf-8')
+.dsh-scratch/codex-review\write-tests.py:258:p=Path('Assembly-CSharp-Editor-Verify.csproj');s=p.read_text();s=s.replace('</Project>','<ItemGroup><Compile Include="Assets\\Editor\\MotionTests.cs" /><Compile Include="Assets\\Editor\\UINavigationQueueTests.cs" /></ItemGroup></Project>');p.write_text(s)
+.dsh-scratch/codex-review\write-navigation.py:3:s=p.read_text(encoding='utf-8-sig').replace('using UnityEngine;','using System;\nusing UIPackage.Motion;\nusing UnityEngine;')
+.dsh-scratch/codex-review\write-navigation.py:77:'''+s[b:];p.write_text(s,encoding='utf-8')
+.dsh-scratch/codex-review\write-navigation.py:79:p.write_text('''using System;
+.dsh-scratch/codex-review\write-navigation.py:131:''',encoding='utf-8')
+.dsh-scratch/codex-review\write-navigation.py:132:p=Path('Assets/A_UI/UI/Package/Navigation/UINavigator.cs');s=p.read_text(encoding='utf-8-sig')
+.dsh-scratch/codex-review\write-navigation.py:337:p.write_text(s,encoding='utf-8')
+.dsh-scratch/codex-review\write-motion2.py:1:exec(open('.dsh-scratch/codex-review/write-motion.py',encoding='utf-8-sig').read().split("w('Core/MotionClock.cs'")[0])
+.dsh-scratch/codex-review\write-motion.py:4: p=base/p;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(s.strip()+'\n',encoding='utf-8')
+.dsh-scratch/codex-review\write-console.py:9:(p/'MotionProof.csproj').write_text(project)
+.dsh-scratch/codex-review\write-console.py:10:(p/'Program.cs').write_text('''using System;
+.dsh-scratch/codex-review\write-console.py:82:''',encoding='utf-8')
+
+EXIT_CODE=0

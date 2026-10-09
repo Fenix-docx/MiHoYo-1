@@ -1,0 +1,22 @@
+﻿运行时间: 2026-10-07T16:26:17.8701174+08:00
+状态基线: E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\cleanup-audit-selftest\baseline.json
+内容哈希基线: E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\evidence\before-hashes.json
+内容哈希来源: 状态基线 JSON 内的 hashes（忽略单独哈希参数）
+================ 新增（Codex 新建的文件） ================
+  + .dsh-scratch/verify/cleanup-audit-selftest/baseline.json
+================ 新增了但不在预期目录（越界嫌疑） ================
+  (无)
+================ 状态变化（既有文件被改动） ================
+  M .dsh-scratch/codex-review/evidence/verify-diff-latest.txt [内容变化（SHA256）; 状态码相同=True]
+    基线=f7d58680784c5d47e33c931c625c3b6424362108c4ef487f38c51ec1e215d54d; 当前=12e551160700775c0e07131f595ae0d62fb8752005065e89e19fb18d82145004
+  M .dsh-scratch/verify/cleanup-audit-selftest/fixture.txt [内容变化（SHA256）; 状态码相同=True]
+    基线=5bd07a1bf2e1f34165f9609a1854564a31cca23e23e1d32cc0d0583820702897; 当前=9191d92a9ff046fa1e0e9bc5f7846f80dcb5b9648a1ec8dcf708a2399dc80c99
+内容哈希覆盖: 746 个历史哈希；0 个既有文件缺少历史哈希，无法判断此前内容变化。
+================ 被删除的文件 ================
+  (无)
+================ 红线检查 ================
+  OK：未发现越界改动
+================ git 索引（不应有暂存改动） ================
+  OK：Codex 没有 git add 新文件
+日志文件: E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\evidence\verify-diff-latest.txt
+

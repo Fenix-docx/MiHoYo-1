@@ -1,0 +1,18 @@
+$ dotnet build Assembly-CSharp-Editor-RepairRound2.csproj --nologo -v m -m:1 -p:BuildInParallel=false -p:RestoreDisableParallel=true
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Assembly-CSharp-firstpass-RepairRound2 -> E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp-firstpass.dll
+  Assembly-CSharp-RepairRound2 -> E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\build\bin\Assembly-CSharp.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionTests.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionTests” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Editor-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UINavigationQueueTests.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UINavigationQueueTests” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Editor-RepairRound2.csproj]
+
+生成失败。
+
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\MotionTests.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionTests” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Editor-RepairRound2.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-repair-round2\probes\UINavigationQueueTests.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UINavigationQueueTests” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Editor-RepairRound2.csproj]
+    0 个警告
+    2 个错误
+
+已用时间 00:00:01.90
+
+EXIT_CODE=1

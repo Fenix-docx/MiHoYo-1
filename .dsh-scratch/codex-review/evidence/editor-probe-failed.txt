@@ -1,0 +1,18 @@
+$ dotnet build Assembly-CSharp-Editor-Verify.csproj --nologo -v m -m:1 -p:BuildInParallel=false -p:RestoreDisableParallel=true
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Assembly-CSharp-firstpass-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp-firstpass.dll
+  Assembly-CSharp-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\probes\MotionTests.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionTests” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Editor-Verify.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\probes\UINavigationQueueTests.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UINavigationQueueTests” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Editor-Verify.csproj]
+
+生成失败。
+
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\probes\MotionTests.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_MotionTests” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Editor-Verify.csproj]
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\probes\UINavigationQueueTests.cs(1,8): error CS1029: #错误:“UIMOTION_COMPILE_PROBE_UINavigationQueueTests” [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Editor-Verify.csproj]
+    0 个警告
+    2 个错误
+
+已用时间 00:00:21.98
+
+EXIT_CODE=1

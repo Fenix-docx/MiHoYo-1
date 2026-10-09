@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="24" result="Passed" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.1306745">
+  <test-suite type="TestSuite" id="1000" name="MiHoYo" fullname="MiHoYo" runstate="Runnable" testcasecount="29" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.130675" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1035" name="Assembly-CSharp-Editor.dll" fullname="E:/Projects_Unity/MiHoYo/Library/ScriptAssemblies/Assembly-CSharp-Editor.dll" runstate="Runnable" testcasecount="29" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.118776" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="80780" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestFixture" id="1001" name="MotionTests" fullname="MotionTests" classname="MotionTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.056546" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1008" name="SkipCompletesExactlyOnceAndOldHandleCannotKillReusedSlot" fullname="MotionTests.SkipCompletesExactlyOnceAndOldHandleCannotKillReusedSlot" methodname="SkipCompletesExactlyOnceAndOldHandleCannotKillReusedSlot" classname="MotionTests" runstate="Runnable" seed="580287965" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.026065" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1002" name="Test01_ArcLengthHasLessThanTwoPercentVariation" fullname="MotionTests.Test01_ArcLengthHasLessThanTwoPercentVariation" methodname="Test01_ArcLengthHasLessThanTwoPercentVariation" classname="MotionTests" runstate="Runnable" seed="2121354735" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.003794" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1005" name="Test03_BackOvershootExtendsEndpointTangent" fullname="MotionTests.Test03_BackOvershootExtendsEndpointTangent" classname="MotionTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.005314" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1003" name="Test03_BackOvershootExtendsEndpointTangent(-0.1f)" fullname="MotionTests.Test03_BackOvershootExtendsEndpointTangent(-0.1f)" methodname="Test03_BackOvershootExtendsEndpointTangent" classname="MotionTests" runstate="Runnable" seed="639678628" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.001713" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1004" name="Test03_BackOvershootExtendsEndpointTangent(0.7f)" fullname="MotionTests.Test03_BackOvershootExtendsEndpointTangent(0.7f)" methodname="Test03_BackOvershootExtendsEndpointTangent" classname="MotionTests" runstate="Runnable" seed="1503102985" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.000227" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1006" name="Test04_DeterministicSamplingAndSharedSeek" fullname="MotionTests.Test04_DeterministicSamplingAndSharedSeek" methodname="Test04_DeterministicSamplingAndSharedSeek" classname="MotionTests" runstate="Runnable" seed="445853525" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.000919" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1007" name="Test09_AnchorResamplesResizedRect" fullname="MotionTests.Test09_AnchorResamplesResizedRect" methodname="Test09_AnchorResamplesResizedRect" classname="MotionTests" runstate="Runnable" seed="34813087" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.002010" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+      </test-suite>
+      <test-suite type="TestFixture" id="1009" name="UINavigationQueueTests" fullname="UINavigationQueueTests" classname="UINavigationQueueTests" runstate="Runnable" testcasecount="18" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.059714" total="18" passed="18" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1010" name="DefaultPanelPathRemainsSynchronous" fullname="UINavigationQueueTests.DefaultPanelPathRemainsSynchronous" methodname="DefaultPanelPathRemainsSynchronous" classname="UINavigationQueueTests" runstate="Runnable" seed="557198287" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.014347" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1015" name="PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled" fullname="UINavigationQueueTests.PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled" classname="UINavigationQueueTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.005718" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1012" name="PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled(True,True)" fullname="UINavigationQueueTests.PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled(True,True)" methodname="PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled" classname="UINavigationQueueTests" runstate="Runnable" seed="2147117539" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.002308" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1013" name="PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled(True,False)" fullname="UINavigationQueueTests.PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled(True,False)" methodname="PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled" classname="UINavigationQueueTests" runstate="Runnable" seed="144537075" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.000899" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1014" name="PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled(False,False)" fullname="UINavigationQueueTests.PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled(False,False)" methodname="PushUnregisteredPanelSucceedsWhenStackIsEmptyOrRestrictionIsDisabled" classname="UINavigationQueueTests" runstate="Runnable" seed="725126398" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.000796" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1016" name="QueuedPushRevalidatesAgainstLatestCurrentAndContinues" fullname="UINavigationQueueTests.QueuedPushRevalidatesAgainstLatestCurrentAndContinues" methodname="QueuedPushRevalidatesAgainstLatestCurrentAndContinues" classname="UINavigationQueueTests" runstate="Runnable" seed="281050185" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.005477" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[UINavigator] page3 不是 page1 的直接子节点。
+]]></output>
+        </test-case>
+        <test-case id="1028" name="ReopeningDuringExitIgnoresOldCompletionAndStaysOpen" fullname="UINavigationQueueTests.ReopeningDuringExitIgnoresOldCompletionAndStaysOpen" methodname="ReopeningDuringExitIgnoresOldCompletionAndStaysOpen" classname="UINavigationQueueTests" runstate="Runnable" seed="1865956945" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.002006" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1011" name="Test12_QueuedPushWaitsAndCommitsOnce" fullname="UINavigationQueueTests.Test12_QueuedPushWaitsAndCommitsOnce" methodname="Test12_QueuedPushWaitsAndCommitsOnce" classname="UINavigationQueueTests" runstate="Runnable" seed="1998924485" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.002359" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1017" name="Test13_TwoBacksReturnTwoLevels" fullname="UINavigationQueueTests.Test13_TwoBacksReturnTwoLevels" methodname="Test13_TwoBacksReturnTwoLevels" classname="UINavigationQueueTests" runstate="Runnable" seed="379272265" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.001902" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1018" name="Test14_RepeatedPushCollapses" fullname="UINavigationQueueTests.Test14_RepeatedPushCollapses" methodname="Test14_RepeatedPushCollapses" classname="UINavigationQueueTests" runstate="Runnable" seed="1622262050" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.001515" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1019" name="Test15_FourthAndFifthBackAreInstant" fullname="UINavigationQueueTests.Test15_FourthAndFifthBackAreInstant" methodname="Test15_FourthAndFifthBackAreInstant" classname="UINavigationQueueTests" runstate="Runnable" seed="142872194" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.001668" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1020" name="Test16_ToRootClearsPendingPushes" fullname="UINavigationQueueTests.Test16_ToRootClearsPendingPushes" methodname="Test16_ToRootClearsPendingPushes" classname="UINavigationQueueTests" runstate="Runnable" seed="1665237062" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.000997" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1021" name="Test17_RemovedTargetIsDroppedAndNextIntentStillRuns" fullname="UINavigationQueueTests.Test17_RemovedTargetIsDroppedAndNextIntentStillRuns" methodname="Test17_RemovedTargetIsDroppedAndNextIntentStillRuns" classname="UINavigationQueueTests" runstate="Runnable" seed="2015986940" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.003041" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[UINavigator] 目标为空或已从导航树移除，丢弃意图。
+]]></output>
+        </test-case>
+        <test-case id="1023" name="Test18_CompletedHandleWinsEvenIfCallbackWasLost" fullname="UINavigationQueueTests.Test18_CompletedHandleWinsEvenIfCallbackWasLost" methodname="Test18_CompletedHandleWinsEvenIfCallbackWasLost" classname="UINavigationQueueTests" runstate="Runnable" seed="1939365241" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.001628" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1024" name="Test18_DisabledPanelInvalidatesHandleButQueueRecovers" fullname="UINavigationQueueTests.Test18_DisabledPanelInvalidatesHandleButQueueRecovers" methodname="Test18_DisabledPanelInvalidatesHandleButQueueRecovers" classname="UINavigationQueueTests" runstate="Runnable" seed="1419345802" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.002164" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[UINavigator] 转移句柄失效，强制完成。
+]]></output>
+        </test-case>
+        <test-case id="1022" name="Test18_WatchdogUsesUnscaledTimeAndContinuesQueue" fullname="UINavigationQueueTests.Test18_WatchdogUsesUnscaledTimeAndContinuesQueue" methodname="Test18_WatchdogUsesUnscaledTimeAndContinuesQueue" classname="UINavigationQueueTests" runstate="Runnable" seed="1256114590" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.002575" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[UINavigator] 转移看门狗超时，强制完成并继续队列。
+]]></output>
+        </test-case>
+        <test-case id="1026" name="Test19_LeavingInputRestoredAfterCompletion" fullname="UINavigationQueueTests.Test19_LeavingInputRestoredAfterCompletion" methodname="Test19_LeavingInputRestoredAfterCompletion" classname="UINavigationQueueTests" runstate="Runnable" seed="1555226219" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.001204" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1025" name="Test19_TimeoutAlsoRestoresOriginalRaycastValue" fullname="UINavigationQueueTests.Test19_TimeoutAlsoRestoresOriginalRaycastValue" methodname="Test19_TimeoutAlsoRestoresOriginalRaycastValue" classname="UINavigationQueueTests" runstate="Runnable" seed="1678401141" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.002707" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[[UINavigator] 转移看门狗超时，强制完成并继续队列。
+]]></output>
+        </test-case>
+        <test-case id="1027" name="Test20_QueueDropsNewestAndRetainsOrder" fullname="UINavigationQueueTests.Test20_QueueDropsNewestAndRetainsOrder" methodname="Test20_QueueDropsNewestAndRetainsOrder" classname="UINavigationQueueTests" runstate="Runnable" seed="36353233" result="Passed" start-time="2026-10-07 08:17:19Z" end-time="2026-10-07 08:17:19Z" duration="0.001656" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[<b><color=#2EA3FF>MCP-FOR-UNITY</color></b>: [TestRunnerNoThrottle] Restored Interaction Mode after test run.
+Saving results to: C:/Users/12118/AppData/LocalLow/DefaultCompany/MiHoYo\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

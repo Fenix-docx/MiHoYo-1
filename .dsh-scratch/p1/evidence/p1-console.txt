@@ -1,0 +1,12 @@
+$ dotnet run --project .dsh-scratch\p1\console\P1Proof.csproj --nologo
+CHAIN C0_max=4.76837158203125E-07 threshold=0.0001 G1_max_degrees=5.122641877509549E-06 threshold=0.5 PASS
+UNIFORM mixed=Cubic+Arc+CR samples=100 mean=0.02515117387578945 std/mean=1.8541534362792876E-05 threshold=0.02 PASS
+ARC circle_relative_error=1.9022758257492E-08 ellipse_relative_error=2.7690416626313663E-08 partial_reverse_multiturn_degenerate_max=3.884786693971407E-08 threshold=0.001 PASS
+CATMULL endpoint_max=0 Through_all_points=PASS
+QUAD analytic_point+tangent PASS; DSL Arc midpoint_height=0.7 PASS
+RESOLUTION widths=1920,2560,1440 height=1080 p_roundtrip_max=1.1920928955078125E-07 threshold=0.001 PASS (pure FromP formula; actual RectTransform covered only by unexecuted Editor test)
+OVERSHOOT OutBack_start+end max_cross=7.450580596923828E-09 extension_length+clamp=PASS
+DEGENERATE finite PASS; DETERMINISM repeat PASS; SAMPLE calls=10000 allocated_bytes=0 PASS
+RESULT 163 checks PASS; Unity Scene handles/Undo/native RectTransform/P0 EditMode tests NOT EXECUTED
+
+EXIT_CODE=0

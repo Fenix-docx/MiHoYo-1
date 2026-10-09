@@ -1,0 +1,4 @@
+$ python .dsh-scratch/p1/verify-build.py
+BLOCKED: full csproj references Library DLLs; no access attempted. Use --allow-library-read only after user authorizes compiler read-only references.
+
+EXIT_CODE=1

@@ -1,0 +1,10 @@
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp.deps.json
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\bin\Assembly-CSharp.pdb
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-Verify\Assembly-CSharp-Verify.csproj.AssemblyReference.cache
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-Verify\Assembly-CSharp-Verify.GeneratedMSBuildEditorConfig.editorconfig
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-Verify\Assembly-CSharp-Verify.csproj.CoreCompileInputs.cache
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-Verify\Assembly-CSharp-Verify.sourcelink.json
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-Verify\Assembly.CCC54CA6.Up2Date
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-Verify\Assembly-CSharp.dll
+E:\Projects_Unity\MiHoYo\.dsh-scratch\codex-review\build\obj\Assembly-CSharp-Verify\Assembly-CSharp.pdb

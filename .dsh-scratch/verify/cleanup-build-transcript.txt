@@ -1,0 +1,63 @@
+﻿PRE-BUILD Temp\obj exists=False
+PRE-BUILD Temp\obj\Assembly-CSharp-Verify exists=False
+PRE-BUILD Temp\obj\Assembly-CSharp-Editor-Verify exists=False
+================ 编译范围补齐情况 ================
+
+
+Assembly     : Assembly-CSharp
+Exit         : 0
+MissingAdded : 0
+Missing      : 
+
+Assembly     : Assembly-CSharp-Editor
+Exit         : 0
+MissingAdded : 0
+Missing      : 
+
+
+
+================ 运行时程序集构建输出（尾部） ================
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Assembly-CSharp-firstpass-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\bin\Assembly-CSharp-firstpass.dll
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\SlimeGpuSurfacePipeline.cs(75,27): warning CS0649: 从未对字段“SlimeGpuSurfacePipeline.SurfaceVertexGpu.Position”赋值，字段将一直保持其默认值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\SlimeGpuSurfacePipeline.cs(76,27): warning CS0649: 从未对字段“SlimeGpuSurfacePipeline.SurfaceVertexGpu.Normal”赋值，字段将一直保持其默认值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\Slime_ControllerMotor.cs(63,15): warning CS0414: 字段“SlimeControllerMotor._lastCollisionSoundTime”已被赋值，但从未使用过它的值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+  Assembly-CSharp-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\bin\Assembly-CSharp.dll
+
+已成功生成。
+
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\SlimeGpuSurfacePipeline.cs(75,27): warning CS0649: 从未对字段“SlimeGpuSurfacePipeline.SurfaceVertexGpu.Position”赋值，字段将一直保持其默认值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\SlimeGpuSurfacePipeline.cs(76,27): warning CS0649: 从未对字段“SlimeGpuSurfacePipeline.SurfaceVertexGpu.Normal”赋值，字段将一直保持其默认值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+E:\Projects_Unity\MiHoYo\Assets\Slime\Scripts\Slime_ControllerMotor.cs(63,15): warning CS0414: 字段“SlimeControllerMotor._lastCollisionSoundTime”已被赋值，但从未使用过它的值 [E:\Projects_Unity\MiHoYo\Assembly-CSharp-Verify.csproj]
+    3 个警告
+    0 个错误
+
+已用时间 00:00:02.44
+================ Editor 程序集构建输出（尾部） ================
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  Assembly-CSharp-firstpass-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\bin\Assembly-CSharp-firstpass.dll
+  Assembly-CSharp-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\bin\Assembly-CSharp.dll
+  Assembly-CSharp-Editor-Verify -> E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\bin\Assembly-CSharp-Editor.dll
+
+已成功生成。
+    0 个警告
+    0 个错误
+
+已用时间 00:00:01.96
+================ 结论 ================
+PASS: 两个程序集都编译通过（新文件已纳入编译范围）
+CLEANUP: 三个临时 Verify csproj 已删除（成功/失败均执行）
+BUILD_SCRIPT_EXIT=0
+POST-BUILD Temp\obj exists=False
+POST-BUILD Temp\obj\Assembly-CSharp-Verify exists=False
+POST-BUILD Temp\obj\Assembly-CSharp-Editor-Verify exists=False
+ROOT_VERIFY_COUNT=0
+OBJ Assembly-CSharp-Editor-Verify fileCount=14
+DLL E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\obj\Assembly-CSharp-Editor-Verify\Assembly-CSharp-Editor.dll bytes=37888
+OBJ Assembly-CSharp-firstpass-Verify fileCount=14
+DLL E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\obj\Assembly-CSharp-firstpass-Verify\Assembly-CSharp-firstpass.dll bytes=47616
+OBJ Assembly-CSharp-Verify fileCount=14
+DLL E:\Projects_Unity\MiHoYo\.dsh-scratch\verify\obj\Assembly-CSharp-Verify\Assembly-CSharp.dll bytes=250880
+
